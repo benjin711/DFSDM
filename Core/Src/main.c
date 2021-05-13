@@ -25,8 +25,10 @@
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include <stdbool.h>
+#include <CycleCounter.h>
 
 #define QUEUELENGTH 2048
+#define SYSCLK 80000000
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -74,6 +76,9 @@ volatile bool secondHalfFull = false;
 int32_t RecBuff[QUEUELENGTH];
 int16_t amplitude;
 
+int sample_rate;
+bool timer_flag = true;
+
 #ifdef __GNUC__
 /* With GCC/RAISONANCE, small msg_info (option LD Linker->Libraries->Small msg_info
    set to 'Yes') calls __io_putchar() */
@@ -116,10 +121,20 @@ GETCHAR_PROTOTYPE
 void HAL_DFSDM_FilterRegConvCpltCallback(DFSDM_Filter_HandleTypeDef *hdfsdm_filter)
 {
 	firstHalfFull = true;
+	if(timer_flag){
+		ResetTimer();
+		StartTimer();
+	}
+
 }
 
 void HAL_DFSDM_FilterRegConvHalfCpltCallback(DFSDM_Filter_HandleTypeDef *hdfsdm_filter)
 {
+	if(timer_flag){
+		StopTimer();
+		sample_rate = (int32_t)(QUEUELENGTH / (2 * getCycles() / (float)SYSCLK));
+		printf("SR: %i\r\n", sample_rate);
+	}
 	secondHalfFull = true;
 }
 
@@ -169,6 +184,8 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	  if (!timer_flag){
+
 		if(firstHalfFull){
 			for(int i=0;i<QUEUELENGTH/2;i++){
 				amplitude = (int16_t)(RecBuff[i]>>8);
@@ -183,6 +200,8 @@ int main(void)
 			}
 			secondHalfFull = false;
 		}
+
+	  }
   }
   /* USER CODE END 3 */
 }
