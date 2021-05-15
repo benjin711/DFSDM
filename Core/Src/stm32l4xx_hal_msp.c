@@ -100,11 +100,11 @@ void HAL_DFSDM_FilterMspInit(DFSDM_Filter_HandleTypeDef* hdfsdm_filter)
     if(HAL_RCC_DFSDM1_CLK_ENABLED==1){
       __HAL_RCC_DFSDM1_CLK_ENABLE();
     }
-  
+
     __HAL_RCC_GPIOE_CLK_ENABLE();
-    /**DFSDM1 GPIO Configuration    
+    /**DFSDM1 GPIO Configuration
     PE7     ------> DFSDM1_DATIN2
-    PE9     ------> DFSDM1_CKOUT 
+    PE9     ------> DFSDM1_CKOUT
     */
     GPIO_InitStruct.Pin = GPIO_PIN_7|GPIO_PIN_9;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
@@ -119,8 +119,9 @@ void HAL_DFSDM_FilterMspInit(DFSDM_Filter_HandleTypeDef* hdfsdm_filter)
   /* USER CODE BEGIN DFSDM1_MspInit 1 */
 
   /* USER CODE END DFSDM1_MspInit 1 */
+  DFSDM1_Init++;
   }
-  
+
     /* DFSDM1 DMA Init */
     /* DFSDM1_FLT0 Init */
   if(hdfsdm_filter->Instance == DFSDM1_Filter0){
@@ -165,11 +166,11 @@ void HAL_DFSDM_ChannelMspInit(DFSDM_Channel_HandleTypeDef* hdfsdm_channel)
     if(HAL_RCC_DFSDM1_CLK_ENABLED==1){
       __HAL_RCC_DFSDM1_CLK_ENABLE();
     }
-  
+
     __HAL_RCC_GPIOE_CLK_ENABLE();
-    /**DFSDM1 GPIO Configuration    
+    /**DFSDM1 GPIO Configuration
     PE7     ------> DFSDM1_DATIN2
-    PE9     ------> DFSDM1_CKOUT 
+    PE9     ------> DFSDM1_CKOUT
     */
     GPIO_InitStruct.Pin = GPIO_PIN_7|GPIO_PIN_9;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
@@ -181,6 +182,7 @@ void HAL_DFSDM_ChannelMspInit(DFSDM_Channel_HandleTypeDef* hdfsdm_channel)
   /* USER CODE BEGIN DFSDM1_MspInit 1 */
 
   /* USER CODE END DFSDM1_MspInit 1 */
+  DFSDM1_Init++;
   }
 
 }
@@ -201,10 +203,10 @@ void HAL_DFSDM_FilterMspDeInit(DFSDM_Filter_HandleTypeDef* hdfsdm_filter)
   /* USER CODE END DFSDM1_MspDeInit 0 */
     /* Peripheral clock disable */
     __HAL_RCC_DFSDM1_CLK_DISABLE();
-  
-    /**DFSDM1 GPIO Configuration    
+
+    /**DFSDM1 GPIO Configuration
     PE7     ------> DFSDM1_DATIN2
-    PE9     ------> DFSDM1_CKOUT 
+    PE9     ------> DFSDM1_CKOUT
     */
     HAL_GPIO_DeInit(GPIOE, GPIO_PIN_7|GPIO_PIN_9);
 
@@ -237,10 +239,10 @@ void HAL_DFSDM_ChannelMspDeInit(DFSDM_Channel_HandleTypeDef* hdfsdm_channel)
   /* USER CODE END DFSDM1_MspDeInit 0 */
     /* Peripheral clock disable */
     __HAL_RCC_DFSDM1_CLK_DISABLE();
-  
-    /**DFSDM1 GPIO Configuration    
+
+    /**DFSDM1 GPIO Configuration
     PE7     ------> DFSDM1_DATIN2
-    PE9     ------> DFSDM1_CKOUT 
+    PE9     ------> DFSDM1_CKOUT
     */
     HAL_GPIO_DeInit(GPIOE, GPIO_PIN_7|GPIO_PIN_9);
 
@@ -267,12 +269,12 @@ void HAL_USART_MspInit(USART_HandleTypeDef* husart)
   /* USER CODE END USART1_MspInit 0 */
     /* Peripheral clock enable */
     __HAL_RCC_USART1_CLK_ENABLE();
-  
+
     __HAL_RCC_GPIOB_CLK_ENABLE();
-    /**USART1 GPIO Configuration    
+    /**USART1 GPIO Configuration
     PB5     ------> USART1_CK
     PB6     ------> USART1_TX
-    PB7     ------> USART1_RX 
+    PB7     ------> USART1_RX
     */
     GPIO_InitStruct.Pin = GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
@@ -303,11 +305,11 @@ void HAL_USART_MspDeInit(USART_HandleTypeDef* husart)
   /* USER CODE END USART1_MspDeInit 0 */
     /* Peripheral clock disable */
     __HAL_RCC_USART1_CLK_DISABLE();
-  
-    /**USART1 GPIO Configuration    
+
+    /**USART1 GPIO Configuration
     PB5     ------> USART1_CK
     PB6     ------> USART1_TX
-    PB7     ------> USART1_RX 
+    PB7     ------> USART1_RX
     */
     HAL_GPIO_DeInit(GPIOB, GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7);
 
