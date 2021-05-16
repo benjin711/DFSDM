@@ -75,9 +75,6 @@ volatile bool secondHalfFull = false;
 int32_t RecBuff[QUEUELENGTH];
 int16_t amplitude;
 
-int sample_rate;
-bool timer_flag = false;
-
 #ifdef __GNUC__
 /* With GCC/RAISONANCE, small msg_info (option LD Linker->Libraries->Small msg_info
    set to 'Yes') calls __io_putchar() */
@@ -120,20 +117,10 @@ GETCHAR_PROTOTYPE
 void HAL_DFSDM_FilterRegConvCpltCallback(DFSDM_Filter_HandleTypeDef *hdfsdm_filter)
 {
 	firstHalfFull = true;
-	if(timer_flag){
-		ResetTimer();
-		StartTimer();
-	}
-
 }
 
 void HAL_DFSDM_FilterRegConvHalfCpltCallback(DFSDM_Filter_HandleTypeDef *hdfsdm_filter)
 {
-	if(timer_flag){
-		StopTimer();
-		sample_rate = (int32_t)(QUEUELENGTH / (2 * getCycles() / (float)SYSCLK));
-		printf("SR: %i\r\n", sample_rate);
-	}
 	secondHalfFull = true;
 }
 
@@ -178,17 +165,10 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-	const int N_FILLINGS = 21;
-	float fillings_counter = 0;
-	int16_t ampl_buffer[QUEUELENGTH * N_FILLINGS];
-	int ampl_buffer_idx = 0;
-	bool start_flag = true;
 
-	const int INIT_SKIPS = 8000000;
-	int skip_counter = 0;
+	arm_rfft_fast_instance_f32* fft_struct = (arm_rfft_fast_instance_f32*) calloc(1, sizeof(arm_cfft_radix2_instance_f32));
+	arm_rfft_fast_init_f32(fft_struct, QUEUELENGTH / 2);
 
-	// Software Downsampling
-	const int SWDSF = 1;
 
 
   while (1)
@@ -196,59 +176,26 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  if (!timer_flag && skip_counter >= INIT_SKIPS){
-
-	  	// Notifying me to speak
-			if(start_flag){
-				printf("Start! ");
-				start_flag = false;
-			}
 
 			if(firstHalfFull && fillings_counter < N_FILLINGS){
 				for(int i=0;i<QUEUELENGTH/2;i++){
 					amplitude = (int16_t)(RecBuff[i]>>8);
-					//printf("R: %i\r\n",amplitude);
-					if(i%SWDSF == 0){
-						ampl_buffer[ampl_buffer_idx] = amplitude;
-						ampl_buffer_idx++;
-					}
 				}
 				firstHalfFull = false;
 
-				fillings_counter += 0.5/SWDSF;
 			}
 			if(secondHalfFull && fillings_counter < N_FILLINGS){
 				for(int i=QUEUELENGTH/2;i<QUEUELENGTH;i++){
 					amplitude = (int16_t)(RecBuff[i]>>8);
-					//printf("R: %i\r\n",amplitude);
-					if(i%SWDSF == 0){
-						ampl_buffer[ampl_buffer_idx] = amplitude;
-						ampl_buffer_idx++;
-					}
+
 				}
 				secondHalfFull = false;
 
-				fillings_counter += 0.5/SWDSF;
 			}
 
-			if ((int)fillings_counter == N_FILLINGS){
+	 }
 
-				// Notifying me that the window for speaking has ended
-				printf("Stop!\n");
 
-				for(int i=0; i < QUEUELENGTH * N_FILLINGS; i++){
-					printf("%i\r\n",ampl_buffer[i]);
-				}
-
-				fillings_counter++;
-			}
-	  }
-
-	  if(skip_counter < INIT_SKIPS){
-	  	skip_counter++;
-	  }
-
-  }
   /* USER CODE END 3 */
 }
 

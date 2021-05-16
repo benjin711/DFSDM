@@ -1,6 +1,7 @@
 # Project Specific
 Debug/
 DFSDM.launch
+DFSDM\ Debug.launch
 
 # Prerequisites
 *.d
