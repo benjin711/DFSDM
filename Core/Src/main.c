@@ -166,9 +166,6 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-	arm_rfft_fast_instance_f32* fft_struct = (arm_rfft_fast_instance_f32*) calloc(1, sizeof(arm_cfft_radix2_instance_f32));
-	arm_rfft_fast_init_f32(fft_struct, QUEUELENGTH / 2);
-
 
 
   while (1)
@@ -177,14 +174,14 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 
-			if(firstHalfFull && fillings_counter < N_FILLINGS){
+			if(firstHalfFull){
 				for(int i=0;i<QUEUELENGTH/2;i++){
 					amplitude = (int16_t)(RecBuff[i]>>8);
 				}
 				firstHalfFull = false;
 
 			}
-			if(secondHalfFull && fillings_counter < N_FILLINGS){
+			if(secondHalfFull){
 				for(int i=QUEUELENGTH/2;i<QUEUELENGTH;i++){
 					amplitude = (int16_t)(RecBuff[i]>>8);
 
