@@ -23,11 +23,16 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdbool.h>
 #include <CycleCounter.h>
+#include <MFCC.h>
+#include <arm_math.h>
 
 #define QUEUELENGTH 2048
 #define SYSCLK 80000000
+#define SAMPLINGRATE 9524
+#define N_MFCCS 13
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -167,6 +172,23 @@ int main(void)
   /* USER CODE BEGIN WHILE */
 
 
+	// Input
+	float32_t input[QUEUELENGTH / 2];
+	// Output
+	float32_t* mfccs = (float32_t*) calloc(N_MFCCS, sizeof(float32_t));
+	// Parameters
+	int sr = SAMPLINGRATE;
+	int frame_length = QUEUELENGTH / 2;
+	int n_mfccs = N_MFCCS;
+	// Objects
+	arm_rfft_fast_instance_f32 rfft_struct;
+	// Initialize Objects
+	arm_status status = arm_rfft_fast_init_f32(&rfft_struct, frame_length);
+
+	// Debug
+	bool flag = true;
+	float32_t output[QUEUELENGTH / 2];
+
 
   while (1)
   {
@@ -174,23 +196,38 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 
-			if(firstHalfFull){
-				for(int i=0;i<QUEUELENGTH/2;i++){
-					amplitude = (int16_t)(RecBuff[i]>>8);
-				}
-				firstHalfFull = false;
-
+		if(firstHalfFull && flag){
+			for(int i=0;i<QUEUELENGTH/2;i++){
+				input[i] = (float32_t)(RecBuff[i]>>8);
+				printf("%f\r\n", input[i]);
 			}
-			if(secondHalfFull){
-				for(int i=QUEUELENGTH/2;i<QUEUELENGTH;i++){
-					amplitude = (int16_t)(RecBuff[i]>>8);
+//			printf("Input Signal\n");
 
-				}
-				secondHalfFull = false;
+			arm_rfft_fast_f32(&rfft_struct, input, output, 0);
 
+//			for(int i=0;i<QUEUELENGTH/2 + 10;i++){
+//				printf("%f\r\n", output[i]);
+//			}
+
+			firstHalfFull = false;
+//			flag = false;
+
+		}
+		if(secondHalfFull){
+			for(int i=QUEUELENGTH/2;i<QUEUELENGTH;i++){
+				input[i - QUEUELENGTH/2] = (float32_t)(RecBuff[i]>>8);
+				printf("%f\r\n", input[i - QUEUELENGTH/2]);
 			}
 
-	 }
+			arm_rfft_fast_f32(&rfft_struct, input, output, 0);
+
+			secondHalfFull = false;
+		}
+
+	}
+
+
+
 
 
   /* USER CODE END 3 */
