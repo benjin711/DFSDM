@@ -27,6 +27,7 @@
 #include <stdbool.h>
 #include <CycleCounter.h>
 #include <MFCC.h>
+#include "linear_to_mel_weight_list.h"
 #include <arm_math.h>
 
 #define QUEUELENGTH 2048
@@ -187,7 +188,9 @@ int main(void)
 
 	// Debug
 	bool flag = true;
-	float32_t output[QUEUELENGTH / 2];
+	float32_t fft[QUEUELENGTH / 2];
+	float32_t mag[QUEUELENGTH / 4];
+	float32_t mel_spect[80];
 
 
   while (1)
@@ -201,17 +204,15 @@ int main(void)
 				input[i] = (float32_t)(RecBuff[i]>>8);
 				printf("%f\r\n", input[i]);
 			}
-//			printf("Input Signal\n");
 
-			arm_rfft_fast_f32(&rfft_struct, input, output, 0);
+			arm_rfft_fast_f32(&rfft_struct, input, fft, 0);
+			arm_cmplx_mag_f32(fft, mag, QUEUELENGTH/4);
 
-//			for(int i=0;i<QUEUELENGTH/2 + 10;i++){
-//				printf("%f\r\n", output[i]);
-//			}
+			calc_log_mel_spectrogram(mag, mel_spect);
+
+
 
 			firstHalfFull = false;
-//			flag = false;
-
 		}
 		if(secondHalfFull){
 			for(int i=QUEUELENGTH/2;i<QUEUELENGTH;i++){
@@ -219,7 +220,8 @@ int main(void)
 				printf("%f\r\n", input[i - QUEUELENGTH/2]);
 			}
 
-			arm_rfft_fast_f32(&rfft_struct, input, output, 0);
+			arm_rfft_fast_f32(&rfft_struct, input, fft, 0);
+			arm_cmplx_mag_f32(fft, mag, QUEUELENGTH/4);
 
 			secondHalfFull = false;
 		}
