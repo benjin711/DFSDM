@@ -26,9 +26,10 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <CycleCounter.h>
-#include <MFCC.h>
-#include "linear_to_mel_weight_list.h"
 #include <arm_math.h>
+#include "MFCC.h"
+#include "linear_to_mel_weight_list.h"
+#include "ben_dct2_f32.h"
 
 #define QUEUELENGTH 2048
 #define SYSCLK 80000000
@@ -180,17 +181,24 @@ int main(void)
 	// Parameters
 	int sr = SAMPLINGRATE;
 	int frame_length = QUEUELENGTH / 2;
+	int num_mel_bins = 64;
 	int n_mfccs = N_MFCCS;
 	// Objects
-	arm_rfft_fast_instance_f32 rfft_struct;
+	arm_rfft_fast_instance_f32 rfft_struct_v1;
+	arm_rfft_fast_instance_f32 rfft_struct_v2;
+
+
 	// Initialize Objects
-	arm_status status = arm_rfft_fast_init_f32(&rfft_struct, frame_length);
+	arm_status status_v1 = arm_rfft_fast_init_f32(&rfft_struct_v1, frame_length);
+	arm_status status_v2 = arm_rfft_fast_init_f32(&rfft_struct_v2, num_mel_bins);
+
 
 	// Debug
 	bool flag = true;
 	float32_t fft[QUEUELENGTH / 2];
 	float32_t mag[QUEUELENGTH / 4];
-	float32_t mel_spect[80];
+	float32_t log_mel_spect[num_mel_bins];
+	float32_t pState[2*num_mel_bins];
 
 
   while (1)
@@ -205,22 +213,25 @@ int main(void)
 				printf("%f\r\n", input[i]);
 			}
 
-			arm_rfft_fast_f32(&rfft_struct, input, fft, 0);
+			arm_rfft_fast_f32(&rfft_struct_v1, input, fft, 0);
 			arm_cmplx_mag_f32(fft, mag, QUEUELENGTH/4);
 
-			calc_log_mel_spectrogram(mag, mel_spect);
+			calc_log_mel_spectrogram(mag, log_mel_spect);
+
+			ben_dct2_f32(pState, log_mel_spect, &rfft_struct_v2);
 
 
 
 			firstHalfFull = false;
+			flag = false;
 		}
 		if(secondHalfFull){
 			for(int i=QUEUELENGTH/2;i<QUEUELENGTH;i++){
 				input[i - QUEUELENGTH/2] = (float32_t)(RecBuff[i]>>8);
-				printf("%f\r\n", input[i - QUEUELENGTH/2]);
+				//printf("%f\r\n", input[i - QUEUELENGTH/2]);
 			}
 
-			arm_rfft_fast_f32(&rfft_struct, input, fft, 0);
+			arm_rfft_fast_f32(&rfft_struct_v1, input, fft, 0);
 			arm_cmplx_mag_f32(fft, mag, QUEUELENGTH/4);
 
 			secondHalfFull = false;
