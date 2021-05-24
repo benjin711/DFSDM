@@ -10,6 +10,6 @@
 
 #include <arm_math.h>
 
-void ben_dct2_f32(float32_t* pState, float32_t* pInlineBuffer, arm_rfft_fast_instance_f32* pRfft);
+void ben_dct2_f32(float32_t* pInlineBuffer, float32_t* pState, float32_t* mfcc_out, arm_rfft_fast_instance_f32* pRfft);
 
 #endif /* INC_BEN_DCT2_F32_H_ */
