@@ -174,31 +174,29 @@ int main(void)
   /* USER CODE BEGIN WHILE */
 
 
-	// Input
-	float32_t input[QUEUELENGTH / 2];
-	// Output
-	float32_t* mfccs = (float32_t*) calloc(N_MFCCS, sizeof(float32_t));
 	// Parameters
-	int sr = SAMPLINGRATE;
-	int frame_length = QUEUELENGTH / 2;
-	int num_mel_bins = 64;
-	int n_mfccs = N_MFCCS;
+	const int sr = SAMPLINGRATE;
+	const int fl = QUEUELENGTH / 2; // frame length
+	const int n_mb = 64; // mel bins
+	const int n_mfccs = N_MFCCS;
+
+	// Buffer
+	float32_t buffer1[fl];
+	float32_t buffer2[fl];
+	// Output
+	float32_t mfccs[N_MFCCS];
 	// Objects
 	arm_rfft_fast_instance_f32 rfft_struct_v1;
 	arm_rfft_fast_instance_f32 rfft_struct_v2;
 
 
 	// Initialize Objects
-	arm_status status_v1 = arm_rfft_fast_init_f32(&rfft_struct_v1, frame_length);
-	arm_status status_v2 = arm_rfft_fast_init_f32(&rfft_struct_v2, num_mel_bins);
+	arm_status status_v1 = arm_rfft_fast_init_f32(&rfft_struct_v1, fl);
+	arm_status status_v2 = arm_rfft_fast_init_f32(&rfft_struct_v2, n_mb);
 
 
 	// Debug
 	bool flag = true;
-	float32_t fft[QUEUELENGTH / 2];
-	float32_t mag[QUEUELENGTH / 4];
-	float32_t log_mel_spect[num_mel_bins];
-	float32_t pState[2*num_mel_bins];
 
 
   while (1)
@@ -209,30 +207,30 @@ int main(void)
 
 		if(firstHalfFull && flag){
 			for(int i=0;i<QUEUELENGTH/2;i++){
-				input[i] = (float32_t)(RecBuff[i]>>8);
-				printf("%f\r\n", input[i]);
+				buffer1[i] = (float32_t)(RecBuff[i]>>8);
+				//printf("%f\r\n", buffer1[i]);
 			}
 
-			arm_rfft_fast_f32(&rfft_struct_v1, input, fft, 0);
-			arm_cmplx_mag_f32(fft, mag, QUEUELENGTH/4);
-
-			calc_log_mel_spectrogram(mag, log_mel_spect);
-
-			ben_dct2_f32(pState, log_mel_spect, &rfft_struct_v2);
+			arm_rfft_fast_f32(&rfft_struct_v1, buffer1, buffer2, 0);
+			arm_cmplx_mag_f32(buffer2, buffer1, fl / 2);
+			calc_log_mel_spectrogram(buffer1, buffer2);
+			ben_dct2_f32(buffer2, buffer1,  mfccs, &rfft_struct_v2);
 
 
 
 			firstHalfFull = false;
-			flag = false;
+			//flag = false;
 		}
 		if(secondHalfFull){
 			for(int i=QUEUELENGTH/2;i<QUEUELENGTH;i++){
-				input[i - QUEUELENGTH/2] = (float32_t)(RecBuff[i]>>8);
-				//printf("%f\r\n", input[i - QUEUELENGTH/2]);
+				buffer1[i - QUEUELENGTH/2] = (float32_t)(RecBuff[i]>>8);
+				//printf("%f\r\n", buffer1[i - QUEUELENGTH/2]);
 			}
 
-			arm_rfft_fast_f32(&rfft_struct_v1, input, fft, 0);
-			arm_cmplx_mag_f32(fft, mag, QUEUELENGTH/4);
+			arm_rfft_fast_f32(&rfft_struct_v1, buffer1, buffer2, 0);
+			arm_cmplx_mag_f32(buffer2, buffer1, fl / 2);
+			calc_log_mel_spectrogram(buffer1, buffer2);
+			ben_dct2_f32(buffer2, buffer1,  mfccs, &rfft_struct_v2);
 
 			secondHalfFull = false;
 		}

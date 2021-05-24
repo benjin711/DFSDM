@@ -1,7 +1,7 @@
 #include "ben_dct2_f32.h"
 #include <arm_math.h>
 
-void ben_dct2_f32(float32_t* pState, float32_t* pInlineBuffer, arm_rfft_fast_instance_f32* pRfft){
+void ben_dct2_f32(float32_t* pInlineBuffer, float32_t* pState, float32_t* mfcc_out, arm_rfft_fast_instance_f32* pRfft){
 	const uint16_t N = 64;
 	const uint16_t Nby2 = 32;
 	const float32_t normalize = 0.17677669529663689; // sqrt(2/N)
@@ -105,7 +105,10 @@ void ben_dct2_f32(float32_t* pState, float32_t* pInlineBuffer, arm_rfft_fast_ins
 	pbuff = pInlineBuffer;
 	pS1 = pState;
 	for(int i = 0; i<N; i++) {
-		pInlineBuffer[i] = pState[2*i] * normalize;
+		pInlineBuffer[i] = pState[2*i] * normalize * 2;
+	}
+	for(int i = 0; i<13; i++) {
+		mfcc_out[i] = pInlineBuffer[i];
 	}
 
 }
