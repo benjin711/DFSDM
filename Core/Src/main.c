@@ -30,6 +30,7 @@
 #include "MFCC.h"
 #include "linear_to_mel_weight_list.h"
 #include "ben_dct2_f32.h"
+#include "ring_buffer.h"
 
 #define QUEUELENGTH 2048
 #define SYSCLK 80000000
@@ -183,14 +184,16 @@ int main(void)
 	// Buffer
 	float32_t buffer1[fl];
 	float32_t buffer2[fl];
+	struct RingBuffer rb;
 	// Output
 	float32_t mfccs[N_MFCCS];
-	// Objects
+	// Other Objects
 	arm_rfft_fast_instance_f32 rfft_struct_v1;
 	arm_rfft_fast_instance_f32 rfft_struct_v2;
 
 
 	// Initialize Objects
+	init_ring_buffer(&rb);
 	arm_status status_v1 = arm_rfft_fast_init_f32(&rfft_struct_v1, fl);
 	arm_status status_v2 = arm_rfft_fast_init_f32(&rfft_struct_v2, n_mb);
 
@@ -215,6 +218,7 @@ int main(void)
 			arm_cmplx_mag_f32(buffer2, buffer1, fl / 2);
 			calc_log_mel_spectrogram(buffer1, buffer2);
 			ben_dct2_f32(buffer2, buffer1,  mfccs, &rfft_struct_v2);
+			insert_data(&rb, mfccs);
 
 
 
@@ -231,6 +235,7 @@ int main(void)
 			arm_cmplx_mag_f32(buffer2, buffer1, fl / 2);
 			calc_log_mel_spectrogram(buffer1, buffer2);
 			ben_dct2_f32(buffer2, buffer1,  mfccs, &rfft_struct_v2);
+			insert_data(&rb, mfccs);
 
 			secondHalfFull = false;
 		}
