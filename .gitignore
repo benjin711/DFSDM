@@ -1,10 +1,11 @@
 # Project Specific
 Debug/
-DFSDM.launch
-DFSDM\ Debug.launch
+MLoMCFinalProject.launch
+MLoMCFinalProject\ Debug.launch
 .settings/
 Network/Models/
 Tests/QuicknTemp/
+.vscode/
 
 # Prerequisites
 *.d
