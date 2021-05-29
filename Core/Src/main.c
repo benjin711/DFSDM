@@ -231,6 +231,7 @@ int main(void)
 				//printf("%f\r\n", buffer1[i - QUEUELENGTH/2]);
 			}
 
+
 			arm_rfft_fast_f32(&rfft_struct_v1, buffer1, buffer2, 0);
 			arm_cmplx_mag_f32(buffer2, buffer1, fl / 2);
 			calc_log_mel_spectrogram(buffer1, buffer2);
