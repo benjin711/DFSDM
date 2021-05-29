@@ -3,6 +3,8 @@ Debug/
 DFSDM.launch
 DFSDM\ Debug.launch
 .settings/
+Network/Models/
+Tests/QuicknTemp/
 
 # Prerequisites
 *.d
