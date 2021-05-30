@@ -22,15 +22,25 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
+#include <string.h>
+
+//#include <stdio.h>
+//#include <stdlib.h>
+//#include <stdbool.h>
 #include <CycleCounter.h>
 #include <arm_math.h>
 #include "MFCC01.h"
 #include "linear_to_mel_weight_list.h"
 #include "ben_dct2_f32.h"
 #include "ring_buffer.h"
+
+#include "tensorflow/lite/micro/kernels/micro_ops.h"
+#include "tensorflow/lite/micro/all_ops_resolver.h"
+#include "tensorflow/lite/micro/micro_mutable_op_resolver.h"
+#include "tensorflow/lite/micro/micro_error_reporter.h"
+#include "tensorflow/lite/micro/micro_interpreter.h"
+#include "tensorflow/lite/micro/micro_mutable_op_resolver.h"
+#include "tensorflow/lite/version.h"
 
 #define ARM_MATH_CM4
 #define ARM_MATH_DSP
@@ -68,6 +78,13 @@ DMA_HandleTypeDef hdma_dfsdm1_flt0;
 USART_HandleTypeDef husart1;
 
 /* USER CODE BEGIN PV */
+namespace {
+  tflite::ErrorReporter* error_reporter = nullptr;
+  const tflite::Model* model = nullptr;
+  tflite::MicroInterpreter* interpreter = nullptr;
+  TfLiteTensor* model_input = nullptr;
+  TfLiteTensor* model_output = nullptr;
+} // namespace
 
 /* USER CODE END PV */
 
@@ -148,6 +165,8 @@ void HAL_DFSDM_FilterRegConvHalfCpltCallback(DFSDM_Filter_HandleTypeDef *hdfsdm_
 int main(void)
 {
   /* USER CODE BEGIN 1 */
+	char buf[50];
+	int buf_len = 0;
 
   /* USER CODE END 1 */
 
@@ -215,10 +234,15 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 
+
+
+
+
 		if(firstHalfFull && flag){
 			for(int i=0;i<QUEUELENGTH/2;i++){
 				buffer1[i] = (float32_t)(RecBuff[i]>>8);
-				//printf("%f\r\n", buffer1[i]);
+		  	buf_len = sprintf(buf, "%f\r\n", buffer1[i]);
+		  	HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
 			}
 
 			arm_rfft_fast_f32(&rfft_struct_v1, buffer1, buffer2, 0);
@@ -235,7 +259,8 @@ int main(void)
 		if(secondHalfFull){
 			for(int i=QUEUELENGTH/2;i<QUEUELENGTH;i++){
 				buffer1[i - QUEUELENGTH/2] = (float32_t)(RecBuff[i]>>8);
-				//printf("%f\r\n", buffer1[i - QUEUELENGTH/2]);
+				buf_len = sprintf(buf, "%f\r\n", buffer1[i - QUEUELENGTH/2]);
+				HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
 			}
 
 
