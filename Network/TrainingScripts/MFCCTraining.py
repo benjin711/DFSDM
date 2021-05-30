@@ -239,7 +239,7 @@ MFCC_PARAMS ={
 "frame_length": FRAME_LENGTH,
 "num_mfcc": NUM_MFCC
 }
-with open(os.path.join(next_model_folder_path, "MFCC_params.json"), "w") as outfile:
+with open(os.path.join(next_model_folder_path, "MFCC{}_params.json".format(next_model_folder)), "w") as outfile:
   json.dump(MFCC_PARAMS, outfile)
 
 # Save .h5 model
