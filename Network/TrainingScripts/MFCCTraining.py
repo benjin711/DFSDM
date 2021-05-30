@@ -250,7 +250,7 @@ train_set = train_set.numpy()
 test_set = test_set.numpy()
 train_labels = train_labels.numpy()
 test_labels = test_labels.numpy()
-tflite_model_name = 'MFCC'
+tflite_model_name = 'MFCC{}'.format(next_model_folder)
 windows_per_sample = int(10 * 9524.0 / 1024)
 # Convert Keras model to a tflite model
 converter = tf.lite.TFLiteConverter.from_keras_model(model)
