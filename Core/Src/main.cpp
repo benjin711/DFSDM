@@ -24,21 +24,19 @@
 /* USER CODE BEGIN Includes */
 #include <string.h>
 
-//#include <stdio.h>
-//#include <stdlib.h>
-//#include <stdbool.h>
 #include <CycleCounter.h>
+#include <stdio.h>
 #include <arm_math.h>
-#include "MFCC01.h"
+#include <MFCC01.h>
 #include "linear_to_mel_weight_list.h"
 #include "ben_dct2_f32.h"
 #include "ring_buffer.h"
 
-#include "tensorflow/lite/micro/kernels/micro_ops.h"
 #include "tensorflow/lite/micro/all_ops_resolver.h"
-#include "tensorflow/lite/micro/micro_mutable_op_resolver.h"
 #include "tensorflow/lite/micro/micro_error_reporter.h"
 #include "tensorflow/lite/micro/micro_interpreter.h"
+#include "tensorflow/lite/micro/kernels/micro_ops.h"
+#include "tensorflow/lite/schema/schema_generated.h"
 #include "tensorflow/lite/micro/micro_mutable_op_resolver.h"
 #include "tensorflow/lite/version.h"
 
@@ -74,7 +72,6 @@
 DFSDM_Filter_HandleTypeDef hdfsdm1_filter0;
 DFSDM_Channel_HandleTypeDef hdfsdm1_channel2;
 DMA_HandleTypeDef hdma_dfsdm1_flt0;
-
 USART_HandleTypeDef husart1;
 
 /* USER CODE BEGIN PV */
@@ -167,6 +164,12 @@ int main(void)
   /* USER CODE BEGIN 1 */
 	char buf[50];
 	int buf_len = 0;
+	TfLiteStatus tflite_status;
+	uint32_t num_elements;
+	uint32_t num_output_elements;
+	float y_val;
+	const int kTensorArenaSize = 30 * 1024;
+	static uint8_t tensor_arena[kTensorArenaSize];
 
   /* USER CODE END 1 */
 
@@ -195,6 +198,147 @@ int main(void)
 	if(HAL_OK != HAL_DFSDM_FilterRegularStart_DMA(&hdfsdm1_filter0, RecBuff, QUEUELENGTH)){
     Error_Handler();
   }
+
+	static tflite::MicroErrorReporter micro_error_reporter;
+	error_reporter = &micro_error_reporter;
+	// Say something to test error reporter
+	buf_len = sprintf(buf, "START TEST\r\n");
+	HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
+	error_reporter->Report("STM32 TensorFlow Lite test");
+	// Map the model into a usable data structure
+	model = tflite::GetModel(MFCC);
+	if (model->version() != TFLITE_SCHEMA_VERSION)
+	{
+		error_reporter->Report("Model version does not match Schema");
+	while(1);
+	}
+
+
+	tflite::MicroMutableOpResolver<16> micro_op_resolver;
+	tflite_status = micro_op_resolver.AddConv2D();
+	if (tflite_status != kTfLiteOk)
+	{
+		error_reporter->Report("Could not add CONV2D op");
+		while(1);
+	}
+	tflite_status = micro_op_resolver.AddRelu();
+	if (tflite_status != kTfLiteOk)
+	{
+		error_reporter->Report("Could not add RELU op");
+		while(1);
+	}
+	tflite_status = micro_op_resolver.AddConv2D();
+	if (tflite_status != kTfLiteOk)
+	{
+		error_reporter->Report("Could not add CONV2D op");
+		while(1);
+	}
+	tflite_status = micro_op_resolver.AddRelu();
+	if (tflite_status != kTfLiteOk)
+	{
+		error_reporter->Report("Could not add RELU op");
+		while(1);
+	}
+	tflite_status = micro_op_resolver.AddMaxPool2D();
+	if (tflite_status != kTfLiteOk)
+	{
+		error_reporter->Report("Could not add RELU op");
+		while(1);
+	}
+	tflite_status = micro_op_resolver.AddConv2D();
+	if (tflite_status != kTfLiteOk)
+	{
+		error_reporter->Report("Could not add CONV2D op");
+		while(1);
+	}
+	tflite_status = micro_op_resolver.AddRelu();
+	if (tflite_status != kTfLiteOk)
+	{
+		error_reporter->Report("Could not add RELU op");
+		while(1);
+	}
+	tflite_status = micro_op_resolver.AddMaxPool2D();
+	if (tflite_status != kTfLiteOk)
+	{
+		error_reporter->Report("Could not add RELU op");
+		while(1);
+	}
+	tflite_status = micro_op_resolver.AddConv2D();
+	if (tflite_status != kTfLiteOk)
+	{
+		error_reporter->Report("Could not add CONV2D op");
+		while(1);
+	}
+	tflite_status = micro_op_resolver.AddRelu();
+	if (tflite_status != kTfLiteOk)
+	{
+		error_reporter->Report("Could not add RELU op");
+		while(1);
+	}
+	tflite_status = micro_op_resolver.AddMean();
+	if (tflite_status != kTfLiteOk)
+	{
+		error_reporter->Report("Could not add MEAN op");
+		while(1);
+	}
+	tflite_status =micro_op_resolver.AddReshape();
+	if (tflite_status != kTfLiteOk)
+	{
+		error_reporter->Report("Could not add RESHAPE op");
+		while(1);
+	}
+	tflite_status = micro_op_resolver.AddFullyConnected();
+	if (tflite_status != kTfLiteOk)
+	{
+	error_reporter->Report("Could not add FULLY CONNECTED op");
+	while(1);
+	}
+	tflite_status = micro_op_resolver.AddRelu();
+	if (tflite_status != kTfLiteOk)
+	{
+		error_reporter->Report("Could not add RELU op");
+		while(1);
+	}
+	tflite_status = micro_op_resolver.AddFullyConnected();
+	if (tflite_status != kTfLiteOk)
+	{
+	error_reporter->Report("Could not add FULLY CONNECTED op");
+	while(1);
+	}
+	tflite_status = micro_op_resolver.AddSoftmax();
+	if (tflite_status != kTfLiteOk)
+	{
+		error_reporter->Report("Could not add Softmax op");
+		while(1);
+	}
+
+	static tflite::MicroInterpreter static_interpreter(
+		model, micro_op_resolver, tensor_arena, kTensorArenaSize, error_reporter);
+	interpreter = &static_interpreter;
+
+	tflite_status = interpreter->AllocateTensors();
+
+	if (tflite_status != kTfLiteOk)
+	{
+		buf_len = sprintf(buf, "Failed tensors\r\n");
+		HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
+		error_reporter->Report("AllocateTensors() failed");
+		while(1);
+	}
+
+	// Assign model input and output buffers (tensors) to pointers
+	model_input = interpreter->input(0);
+	model_output = interpreter->output(0);
+	float input_size = model_input->dims->size;
+	buf_len = sprintf(buf, "Model input size: %f\r\n", input_size);
+	HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
+	// Get number of elements in input tensor
+	num_elements = model_input->bytes / sizeof(int) * 4;
+	buf_len = sprintf(buf, "Number of input elements: %lu\r\n", num_elements);
+	HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
+
+
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -241,8 +385,8 @@ int main(void)
 		if(firstHalfFull && flag){
 			for(int i=0;i<QUEUELENGTH/2;i++){
 				buffer1[i] = (float32_t)(RecBuff[i]>>8);
-		  	buf_len = sprintf(buf, "%f\r\n", buffer1[i]);
-		  	HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
+//		  	buf_len = sprintf(buf, "%f\r\n", buffer1[i]);
+//		  	HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
 			}
 
 			arm_rfft_fast_f32(&rfft_struct_v1, buffer1, buffer2, 0);
@@ -259,8 +403,8 @@ int main(void)
 		if(secondHalfFull){
 			for(int i=QUEUELENGTH/2;i<QUEUELENGTH;i++){
 				buffer1[i - QUEUELENGTH/2] = (float32_t)(RecBuff[i]>>8);
-				buf_len = sprintf(buf, "%f\r\n", buffer1[i - QUEUELENGTH/2]);
-				HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
+//				buf_len = sprintf(buf, "%f\r\n", buffer1[i - QUEUELENGTH/2]);
+//				HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
 			}
 
 

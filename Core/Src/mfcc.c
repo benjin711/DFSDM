@@ -6,8 +6,8 @@
  */
 
 #include <arm_math.h>
+#include "mfcc.h"
 #include <stdlib.h>
-#include "MFCC.h"
 
 void compute_mfccs_init_objects(struct compute_mfccs_objects* objs, struct compute_mfccs_params* params) {
 	arm_rfft_fast_init_f32(objs->rfft_struct, params->frame_length);
