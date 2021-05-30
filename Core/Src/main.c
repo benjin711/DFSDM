@@ -27,10 +27,17 @@
 #include <stdbool.h>
 #include <CycleCounter.h>
 #include <arm_math.h>
-#include "MFCC.h"
+#include "MFCC01.h"
 #include "linear_to_mel_weight_list.h"
 #include "ben_dct2_f32.h"
 #include "ring_buffer.h"
+
+#define ARM_MATH_CM4
+#define ARM_MATH_DSP
+#define CMSIS_NN
+#define TF_LITE_USE_GLOBAL_CMATH_FUNCTIONS
+#define TF_LITE_USE_GLOBAL_MAX
+#define TF_LITE_USE_GLOBAL_MIN
 
 #define QUEUELENGTH 2048
 #define SYSCLK 80000000
