@@ -8,8 +8,10 @@
 #ifndef INC_RING_BUFFER_H_
 #define INC_RING_BUFFER_H_
 
-#define BUFFERSIZE 156
+#define BUFFERSIZE 93
 #define N_MFCC 13
+#define INPUT_SCALE 0.003135847859084606
+#define INPUT_ZERO_POINT -128
 
 #include <arm_math.h>
 

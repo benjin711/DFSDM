@@ -213,104 +213,104 @@ int main(void)
 	while(1);
 	}
 
-
-	tflite::MicroMutableOpResolver<16> micro_op_resolver;
-	tflite_status = micro_op_resolver.AddConv2D();
-	if (tflite_status != kTfLiteOk)
-	{
-		error_reporter->Report("Could not add CONV2D op");
-		while(1);
-	}
-	tflite_status = micro_op_resolver.AddRelu();
-	if (tflite_status != kTfLiteOk)
-	{
-		error_reporter->Report("Could not add RELU op");
-		while(1);
-	}
-	tflite_status = micro_op_resolver.AddConv2D();
-	if (tflite_status != kTfLiteOk)
-	{
-		error_reporter->Report("Could not add CONV2D op");
-		while(1);
-	}
-	tflite_status = micro_op_resolver.AddRelu();
-	if (tflite_status != kTfLiteOk)
-	{
-		error_reporter->Report("Could not add RELU op");
-		while(1);
-	}
-	tflite_status = micro_op_resolver.AddMaxPool2D();
-	if (tflite_status != kTfLiteOk)
-	{
-		error_reporter->Report("Could not add RELU op");
-		while(1);
-	}
-	tflite_status = micro_op_resolver.AddConv2D();
-	if (tflite_status != kTfLiteOk)
-	{
-		error_reporter->Report("Could not add CONV2D op");
-		while(1);
-	}
-	tflite_status = micro_op_resolver.AddRelu();
-	if (tflite_status != kTfLiteOk)
-	{
-		error_reporter->Report("Could not add RELU op");
-		while(1);
-	}
-	tflite_status = micro_op_resolver.AddMaxPool2D();
-	if (tflite_status != kTfLiteOk)
-	{
-		error_reporter->Report("Could not add RELU op");
-		while(1);
-	}
-	tflite_status = micro_op_resolver.AddConv2D();
-	if (tflite_status != kTfLiteOk)
-	{
-		error_reporter->Report("Could not add CONV2D op");
-		while(1);
-	}
-	tflite_status = micro_op_resolver.AddRelu();
-	if (tflite_status != kTfLiteOk)
-	{
-		error_reporter->Report("Could not add RELU op");
-		while(1);
-	}
-	tflite_status = micro_op_resolver.AddMean();
-	if (tflite_status != kTfLiteOk)
-	{
-		error_reporter->Report("Could not add MEAN op");
-		while(1);
-	}
-	tflite_status =micro_op_resolver.AddReshape();
-	if (tflite_status != kTfLiteOk)
-	{
-		error_reporter->Report("Could not add RESHAPE op");
-		while(1);
-	}
-	tflite_status = micro_op_resolver.AddFullyConnected();
-	if (tflite_status != kTfLiteOk)
-	{
-	error_reporter->Report("Could not add FULLY CONNECTED op");
-	while(1);
-	}
-	tflite_status = micro_op_resolver.AddRelu();
-	if (tflite_status != kTfLiteOk)
-	{
-		error_reporter->Report("Could not add RELU op");
-		while(1);
-	}
-	tflite_status = micro_op_resolver.AddFullyConnected();
-	if (tflite_status != kTfLiteOk)
-	{
-	error_reporter->Report("Could not add FULLY CONNECTED op");
-	while(1);
-	}
-	tflite_status = micro_op_resolver.AddSoftmax();
-	if (tflite_status != kTfLiteOk)
-	{
-		error_reporter->Report("Could not add Softmax op");
-		while(1);
-	}
+	tflite::AllOpsResolver micro_op_resolver;
+	//tflite::MicroMutableOpResolver<16> micro_op_resolver;
+//	tflite_status = micro_op_resolver.AddConv2D();
+//	if (tflite_status != kTfLiteOk)
+//	{
+//		error_reporter->Report("Could not add CONV2D op");
+//		while(1);
+//	}
+//	tflite_status = micro_op_resolver.AddRelu();
+//	if (tflite_status != kTfLiteOk)
+//	{
+//		error_reporter->Report("Could not add RELU op");
+//		while(1);
+//	}
+//	tflite_status = micro_op_resolver.AddConv2D();
+//	if (tflite_status != kTfLiteOk)
+//	{
+//		error_reporter->Report("Could not add CONV2D op");
+//		while(1);
+//	}
+//	tflite_status = micro_op_resolver.AddRelu();
+//	if (tflite_status != kTfLiteOk)
+//	{
+//		error_reporter->Report("Could not add RELU op");
+//		while(1);
+//	}
+//	tflite_status = micro_op_resolver.AddMaxPool2D();
+//	if (tflite_status != kTfLiteOk)
+//	{
+//		error_reporter->Report("Could not add RELU op");
+//		while(1);
+//	}
+//	tflite_status = micro_op_resolver.AddConv2D();
+//	if (tflite_status != kTfLiteOk)
+//	{
+//		error_reporter->Report("Could not add CONV2D op");
+//		while(1);
+//	}
+//	tflite_status = micro_op_resolver.AddRelu();
+//	if (tflite_status != kTfLiteOk)
+//	{
+//		error_reporter->Report("Could not add RELU op");
+//		while(1);
+//	}
+//	tflite_status = micro_op_resolver.AddMaxPool2D();
+//	if (tflite_status != kTfLiteOk)
+//	{
+//		error_reporter->Report("Could not add RELU op");
+//		while(1);
+//	}
+//	tflite_status = micro_op_resolver.AddConv2D();
+//	if (tflite_status != kTfLiteOk)
+//	{
+//		error_reporter->Report("Could not add CONV2D op");
+//		while(1);
+//	}
+//	tflite_status = micro_op_resolver.AddRelu();
+//	if (tflite_status != kTfLiteOk)
+//	{
+//		error_reporter->Report("Could not add RELU op");
+//		while(1);
+//	}
+//	tflite_status = micro_op_resolver.AddMean();
+//	if (tflite_status != kTfLiteOk)
+//	{
+//		error_reporter->Report("Could not add MEAN op");
+//		while(1);
+//	}
+//	tflite_status =micro_op_resolver.AddReshape();
+//	if (tflite_status != kTfLiteOk)
+//	{
+//		error_reporter->Report("Could not add RESHAPE op");
+//		while(1);
+//	}
+//	tflite_status = micro_op_resolver.AddFullyConnected();
+//	if (tflite_status != kTfLiteOk)
+//	{
+//	error_reporter->Report("Could not add FULLY CONNECTED op");
+//	while(1);
+//	}
+//	tflite_status = micro_op_resolver.AddRelu();
+//	if (tflite_status != kTfLiteOk)
+//	{
+//		error_reporter->Report("Could not add RELU op");
+//		while(1);
+//	}
+//	tflite_status = micro_op_resolver.AddFullyConnected();
+//	if (tflite_status != kTfLiteOk)
+//	{
+//	error_reporter->Report("Could not add FULLY CONNECTED op");
+//	while(1);
+//	}
+//	tflite_status = micro_op_resolver.AddSoftmax();
+//	if (tflite_status != kTfLiteOk)
+//	{
+//		error_reporter->Report("Could not add Softmax op");
+//		while(1);
+//	}
 
 	static tflite::MicroInterpreter static_interpreter(
 		model, micro_op_resolver, tensor_arena, kTensorArenaSize, error_reporter);
@@ -377,11 +377,6 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-
-
-
-
-
 		if(firstHalfFull && flag){
 			for(int i=0;i<QUEUELENGTH/2;i++){
 				buffer1[i] = (float32_t)(RecBuff[i]>>8);
@@ -395,8 +390,6 @@ int main(void)
 			ben_dct2_f32(buffer2, buffer1,  mfccs, &rfft_struct_v2);
 			insert_data(&rb, mfccs);
 
-
-
 			firstHalfFull = false;
 			//flag = false;
 		}
@@ -407,7 +400,6 @@ int main(void)
 //				HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
 			}
 
-
 			arm_rfft_fast_f32(&rfft_struct_v1, buffer1, buffer2, 0);
 			arm_cmplx_mag_f32(buffer2, buffer1, fl / 2);
 			calc_log_mel_spectrogram(buffer1, buffer2);
@@ -415,6 +407,21 @@ int main(void)
 			insert_data(&rb, mfccs);
 
 			secondHalfFull = false;
+		}
+
+		if(rb.buffer_ptr >= rb.last_inference_head + 1){
+			copy_inference_batch(&rb, model_input->data.f);
+			tflite_status = interpreter->Invoke();
+			if(tflite_status != kTfLiteOk)
+			{
+				error_reporter->Report("Invoke failed");
+			}
+			y_val = model_output->data.f[0];
+//			num_output_elements = model_output->bytes / sizeof(float);
+//			buf_len = sprintf(buf, "Number of output elements: %lu\r\n", num_output_elements);
+			HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
+			buf_len = sprintf(buf, "Output: %f\r\n", y_val);
+			HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
 		}
 
 	}
