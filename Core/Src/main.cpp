@@ -51,6 +51,8 @@
 #define SYSCLK 80000000
 #define SAMPLINGRATE 9524
 #define N_MFCCS 13
+#define INPUT_SCALE 0.003135847859084606
+#define INPUT_ZERO_POINT -128
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -152,6 +154,19 @@ void HAL_DFSDM_FilterRegConvHalfCpltCallback(DFSDM_Filter_HandleTypeDef *hdfsdm_
 {
 	secondHalfFull = true;
 }
+
+/**
+  * @brief Convert the float mfccs into int8 after normalization
+  * @param mfccs_float, mfccs_int8
+  * @retval None
+  */
+void normalize_mfccs(float32_t* mfccs_float, int8_t* mfccs_int8){
+	for(int i = 0; i<N_MFCCS; i++){
+		mfccs_int8[i] = mfccs_float[i] / INPUT_SCALE + INPUT_ZERO_POINT;
+	}
+}
+
+
 
 /* USER CODE END 0 */
 
@@ -356,7 +371,9 @@ int main(void)
 	float32_t buffer2[fl];
 	struct RingBuffer rb;
 	// Output
-	float32_t mfccs[N_MFCCS];
+	float32_t mfccs_float[N_MFCCS];
+	int8_t mfccs_int8[N_MFCCS];
+
 	// Other Objects
 	arm_rfft_fast_instance_f32 rfft_struct_v1;
 	arm_rfft_fast_instance_f32 rfft_struct_v2;
@@ -387,8 +404,9 @@ int main(void)
 			arm_rfft_fast_f32(&rfft_struct_v1, buffer1, buffer2, 0);
 			arm_cmplx_mag_f32(buffer2, buffer1, fl / 2);
 			calc_log_mel_spectrogram(buffer1, buffer2);
-			ben_dct2_f32(buffer2, buffer1,  mfccs, &rfft_struct_v2);
-			insert_data(&rb, mfccs);
+			ben_dct2_f32(buffer2, buffer1,  mfccs_float, &rfft_struct_v2);
+			normalize_mfccs(mfccs_float, mfccs_int8);
+			insert_data(&rb, mfccs_int8);
 
 			firstHalfFull = false;
 			//flag = false;
@@ -403,8 +421,9 @@ int main(void)
 			arm_rfft_fast_f32(&rfft_struct_v1, buffer1, buffer2, 0);
 			arm_cmplx_mag_f32(buffer2, buffer1, fl / 2);
 			calc_log_mel_spectrogram(buffer1, buffer2);
-			ben_dct2_f32(buffer2, buffer1,  mfccs, &rfft_struct_v2);
-			insert_data(&rb, mfccs);
+			ben_dct2_f32(buffer2, buffer1,  mfccs_float, &rfft_struct_v2);
+			normalize_mfccs(mfccs_float, mfccs_int8);
+			insert_data(&rb, mfccs_int8);
 
 			secondHalfFull = false;
 		}

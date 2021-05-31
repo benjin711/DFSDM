@@ -10,13 +10,11 @@
 
 #define BUFFERSIZE 93
 #define N_MFCC 13
-#define INPUT_SCALE 0.003135847859084606
-#define INPUT_ZERO_POINT -128
 
 #include <arm_math.h>
 
 struct RingBuffer {
-	float32_t data[BUFFERSIZE][N_MFCC];
+	int8_t data[BUFFERSIZE][N_MFCC];
 	uint16_t last_inference_head;
 	uint16_t buffer_ptr;
 };
