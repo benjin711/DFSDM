@@ -6,6 +6,7 @@ MLoMCFinalProject\ Debug.launch
 Network/Models/
 Tests/QuicknTemp/
 .vscode/
+*.wav
 
 # Prerequisites
 *.d

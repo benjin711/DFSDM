@@ -162,7 +162,7 @@ void HAL_DFSDM_FilterRegConvHalfCpltCallback(DFSDM_Filter_HandleTypeDef *hdfsdm_
   */
 void normalize_mfccs(float32_t* mfccs_float, int8_t* mfccs_int8){
 	for(int i = 0; i<N_MFCCS; i++){
-		mfccs_int8[i] = mfccs_float[i] / INPUT_SCALE + INPUT_ZERO_POINT;
+		mfccs_int8[i] = (mfccs_float[i] / 512 + 0.5) / INPUT_SCALE + INPUT_ZERO_POINT;
 	}
 }
 

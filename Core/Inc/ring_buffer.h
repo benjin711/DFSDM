@@ -21,11 +21,11 @@ struct RingBuffer {
 
 void init_ring_buffer(struct RingBuffer* rb);
 
-void insert_data(struct RingBuffer* rb, float32_t* data);
+void insert_data(struct RingBuffer* rb, int8_t* data);
 
 void increment_buffer_ptr(struct RingBuffer* rb);
 
-void copy_inference_batch(struct RingBuffer* rb, float32_t* batch);
+void copy_inference_batch(struct RingBuffer* rb, int8_t* batch);
 
 void update_last_inference_head(struct RingBuffer* rb);
 
