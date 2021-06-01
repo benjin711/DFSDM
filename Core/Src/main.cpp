@@ -27,7 +27,7 @@
 #include <CycleCounter.h>
 #include <stdio.h>
 #include <arm_math.h>
-#include <MFCC01.h>
+#include "MFCC09.h"
 #include "linear_to_mel_weight_list.h"
 #include "ben_dct2_f32.h"
 #include "ring_buffer.h"
@@ -182,7 +182,7 @@ int main(void)
 	TfLiteStatus tflite_status;
 	uint32_t num_elements;
 	uint32_t num_output_elements;
-	float y_val;
+	float32_t y_val;
 	const int kTensorArenaSize = 30 * 1024;
 	static uint8_t tensor_arena[kTensorArenaSize];
 
@@ -436,8 +436,8 @@ int main(void)
 				error_reporter->Report("Invoke failed");
 			}
 			y_val = model_output->data.f[0];
-//			num_output_elements = model_output->bytes / sizeof(float);
-//			buf_len = sprintf(buf, "Number of output elements: %lu\r\n", num_output_elements);
+			num_output_elements = model_output->bytes; /// sizeof(float)
+			buf_len = sprintf(buf, "Number of output elements: %lu\r\n", num_output_elements);
 			HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
 			buf_len = sprintf(buf, "Output: %f\r\n", y_val);
 			HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);

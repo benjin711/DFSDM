@@ -167,7 +167,7 @@ def print_input_output_details(input_details, output_details):
   print("shape:", output_details[0]['shape'])
   print("type:", output_details[0]['dtype'])
 
-PICKLED_INPUT_OUTPUT = True
+PICKLED_INPUT_OUTPUT = False
 
 SR = 9524.0
 LOWER_EDGE_HERTZ, UPPER_EDGE_HERTZ, NUM_MEL_BINS = 80.0, 4700.0, 64
@@ -209,7 +209,7 @@ pickle_off = open(os.path.join("..", "Data", "input_output.pkl"),"rb")
 train_set, train_labels, test_set, test_labels = pickle.load(pickle_off)
 
 batchSize = 10
-epochs = 1
+epochs = 30
 
 model = construct_model()
 model.compile(loss='sparse_categorical_crossentropy', optimizer=tf.keras.optimizers.Adam(), metrics=['accuracy'])
@@ -243,7 +243,7 @@ with open(os.path.join(next_model_folder_path, "MFCC{}_params.json".format(next_
   json.dump(MFCC_PARAMS, outfile)
 
 # Save .h5 model
-model.save(os.path.join(next_model_folder_path, "MFCCmodel{}.h5".format(next_model_folder)))
+model.save(os.path.join(next_model_folder_path, "MFCC{}model.h5".format(next_model_folder)))
 
 # Save .tflite + header
 train_set = train_set.numpy()
@@ -274,7 +274,7 @@ open(os.path.join(next_model_folder_path, tflite_model_name + '.tflite'), 'wb').
 
 c_model_name = 'MFCC'
 # Write TFLite model to a C source (or header) file
-with open(os.path.join(next_model_folder_path, c_model_name + '.h'), 'w') as file:
+with open(os.path.join(next_model_folder_path, c_model_name + '{}.h'.format(next_model_folder)), 'w') as file:
     file.write(hex_to_c_array(tflite_model, c_model_name))
 
 tflite_interpreter = tf.lite.Interpreter(model_path=os.path.join(next_model_folder_path, tflite_model_name + '.tflite'))
