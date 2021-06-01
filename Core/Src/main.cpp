@@ -160,9 +160,9 @@ void HAL_DFSDM_FilterRegConvHalfCpltCallback(DFSDM_Filter_HandleTypeDef *hdfsdm_
   * @param mfccs_float, mfccs_int8
   * @retval None
   */
-void normalize_mfccs(float32_t* mfccs_float, int8_t* mfccs_int8){
+void normalize_mfccs(float32_t* mfccs_float){
 	for(int i = 0; i<N_MFCCS; i++){
-		mfccs_int8[i] = (mfccs_float[i] / 512 + 0.5) / INPUT_SCALE + INPUT_ZERO_POINT;
+		mfccs_float[i] = (mfccs_float[i] / 512 + 0.5) / INPUT_SCALE + INPUT_ZERO_POINT;
 	}
 }
 
@@ -405,8 +405,8 @@ int main(void)
 			arm_cmplx_mag_f32(buffer2, buffer1, fl / 2);
 			calc_log_mel_spectrogram(buffer1, buffer2);
 			ben_dct2_f32(buffer2, buffer1,  mfccs_float, &rfft_struct_v2);
-			normalize_mfccs(mfccs_float, mfccs_int8);
-			insert_data(&rb, mfccs_int8);
+			normalize_mfccs(mfccs_float);
+			insert_data(&rb, mfccs_float);
 
 			firstHalfFull = false;
 			//flag = false;
@@ -422,8 +422,8 @@ int main(void)
 			arm_cmplx_mag_f32(buffer2, buffer1, fl / 2);
 			calc_log_mel_spectrogram(buffer1, buffer2);
 			ben_dct2_f32(buffer2, buffer1,  mfccs_float, &rfft_struct_v2);
-			normalize_mfccs(mfccs_float, mfccs_int8);
-			insert_data(&rb, mfccs_int8);
+			normalize_mfccs(mfccs_float);
+			insert_data(&rb, mfccs_float);
 
 			secondHalfFull = false;
 		}
