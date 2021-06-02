@@ -185,6 +185,7 @@ int main(void)
 	int8_t output[2];
 	const int kTensorArenaSize = 30 * 1024;
 	static uint8_t tensor_arena[kTensorArenaSize];
+	size_t counter = 0;
 
   /* USER CODE END 1 */
 
@@ -428,7 +429,7 @@ int main(void)
 			secondHalfFull = false;
 		}
 
-		if(rb.buffer_ptr >= rb.last_inference_head + 1){
+		if(rb.buffer_ptr != (rb.last_inference_head + 1) % 93){
 			copy_inference_batch(&rb, model_input->data.int8);
 			tflite_status = interpreter->Invoke();
 			if(tflite_status != kTfLiteOk)
@@ -437,11 +438,12 @@ int main(void)
 			}
 			output[0] = model_output->data.int8[0];
 			output[1] = model_output->data.int8[1];
-			num_output_elements = model_output->bytes;
-			buf_len = sprintf(buf, "Number of output elements: %lu\r\n", num_output_elements);
+//			num_output_elements = model_output->bytes;
+//			buf_len = sprintf(buf, "Number of output elements: %lu\r\n", num_output_elements);
+//			HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
+			buf_len = sprintf(buf, "Output %d: [%d, %d]\r\n", counter, output[0], output[1]);
 			HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
-			buf_len = sprintf(buf, "Output: [%d, %d]\r\n", output[0], output[1]);
-			HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
+			counter++;
 		}
 
 	}

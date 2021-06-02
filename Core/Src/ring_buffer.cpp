@@ -20,7 +20,15 @@ void insert_data(struct RingBuffer* rb, int8_t* data){
 }
 
 void increment_buffer_ptr(struct RingBuffer* rb){
-	(rb->buffer_ptr)++;
+	if(rb->buffer_ptr < BUFFERSIZE - 1){
+		(rb->buffer_ptr)++;
+	} else if(rb->buffer_ptr == BUFFERSIZE - 1){
+		rb->buffer_ptr = 0;
+	} else {
+		while(1){
+			// buffer ptr out of range
+		}
+	}
 }
 
 void copy_inference_batch(struct RingBuffer* rb, int8_t* batch){
@@ -35,5 +43,13 @@ void copy_inference_batch(struct RingBuffer* rb, int8_t* batch){
 }
 
 void update_last_inference_head(struct RingBuffer* rb){
-	rb->last_inference_head = rb->buffer_ptr;
+	if (rb->buffer_ptr > 0 && rb->buffer_ptr < BUFFERSIZE){
+		rb->last_inference_head = rb->buffer_ptr - 1;
+	} else if (rb->buffer_ptr == 0){
+		rb->last_inference_head = BUFFERSIZE - 1;
+	} else {
+		while(1){
+			// while loop of shame
+		}
+	}
 }
