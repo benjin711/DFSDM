@@ -160,9 +160,9 @@ void HAL_DFSDM_FilterRegConvHalfCpltCallback(DFSDM_Filter_HandleTypeDef *hdfsdm_
   * @param mfccs_float, mfccs_int8
   * @retval None
   */
-void normalize_mfccs(float32_t* mfccs_float){
+void normalize_mfccs(float32_t* mfccs_float, int8_t* mfccs_int8){
 	for(int i = 0; i<N_MFCCS; i++){
-		mfccs_float[i] = (mfccs_float[i] / 512 + 0.5) / INPUT_SCALE + INPUT_ZERO_POINT;
+		mfccs_int8[i] = (int8_t)((mfccs_float[i] / 512 + 0.5) / INPUT_SCALE + INPUT_ZERO_POINT);
 	}
 }
 
@@ -182,7 +182,7 @@ int main(void)
 	TfLiteStatus tflite_status;
 	uint32_t num_elements;
 	uint32_t num_output_elements;
-	float32_t y_val;
+	int8_t output[2];
 	const int kTensorArenaSize = 30 * 1024;
 	static uint8_t tensor_arena[kTensorArenaSize];
 
@@ -348,7 +348,7 @@ int main(void)
 	buf_len = sprintf(buf, "Model input size: %f\r\n", input_size);
 	HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
 	// Get number of elements in input tensor
-	num_elements = model_input->bytes / sizeof(int) * 4;
+	num_elements = model_input->bytes;
 	buf_len = sprintf(buf, "Number of input elements: %lu\r\n", num_elements);
 	HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
 
@@ -405,8 +405,8 @@ int main(void)
 			arm_cmplx_mag_f32(buffer2, buffer1, fl / 2);
 			calc_log_mel_spectrogram(buffer1, buffer2);
 			ben_dct2_f32(buffer2, buffer1,  mfccs_float, &rfft_struct_v2);
-			normalize_mfccs(mfccs_float);
-			insert_data(&rb, mfccs_float);
+			normalize_mfccs(mfccs_float, mfccs_int8);
+			insert_data(&rb, mfccs_int8);
 
 			firstHalfFull = false;
 			//flag = false;
@@ -422,8 +422,8 @@ int main(void)
 			arm_cmplx_mag_f32(buffer2, buffer1, fl / 2);
 			calc_log_mel_spectrogram(buffer1, buffer2);
 			ben_dct2_f32(buffer2, buffer1,  mfccs_float, &rfft_struct_v2);
-			normalize_mfccs(mfccs_float);
-			insert_data(&rb, mfccs_float);
+			normalize_mfccs(mfccs_float, mfccs_int8);
+			insert_data(&rb, mfccs_int8);
 
 			secondHalfFull = false;
 		}
@@ -435,11 +435,12 @@ int main(void)
 			{
 				error_reporter->Report("Invoke failed");
 			}
-			y_val = model_output->data.f[0];
-			num_output_elements = model_output->bytes; /// sizeof(float)
+			output[0] = model_output->data.int8[0];
+			output[1] = model_output->data.int8[1];
+			num_output_elements = model_output->bytes;
 			buf_len = sprintf(buf, "Number of output elements: %lu\r\n", num_output_elements);
 			HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
-			buf_len = sprintf(buf, "Output: %f\r\n", y_val);
+			buf_len = sprintf(buf, "Output: [%d, %d]\r\n", output[0], output[1]);
 			HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
 		}
 
