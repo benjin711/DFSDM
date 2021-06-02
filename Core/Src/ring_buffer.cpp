@@ -12,7 +12,7 @@ void init_ring_buffer(struct RingBuffer* rb){
 	rb->last_inference_head = 0;
 }
 
-void insert_data(struct RingBuffer* rb, float32_t* data){
+void insert_data(struct RingBuffer* rb, int8_t* data){
 	for(int i = 0; i < N_MFCC; i++){
 		rb->data[rb->buffer_ptr][i] = data[i];
 	}
@@ -23,7 +23,7 @@ void increment_buffer_ptr(struct RingBuffer* rb){
 	(rb->buffer_ptr)++;
 }
 
-void copy_inference_batch(struct RingBuffer* rb, float32_t* batch){
+void copy_inference_batch(struct RingBuffer* rb, int8_t* batch){
 
 	for(int i = 0; i < BUFFERSIZE; i++){
 		for(int j = 0; j < N_MFCC; j++){
