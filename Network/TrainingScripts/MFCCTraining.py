@@ -12,13 +12,17 @@ from tensorflow.keras import layers, models, regularizers
 from tqdm import tqdm
 import os
 import pickle
+from matplotlib import pyplot as plt
+import sys
 
 def resample_wav(old_fs, new_fs, data):
     number_new_samples = int(data.shape[0] * float(new_fs)/float(old_fs))
     data = sps.resample(data, number_new_samples)
     return data
 
-def load_data():
+def load_data(split, whole_dataset):
+    REF_NUMBER = 1000
+
     x_train_list = []
     y_train_list = []
 
@@ -27,11 +31,12 @@ def load_data():
 
     totalSliceLength = 10 # Length to stuff the signals to, given in seconds
 
-    # trainsize = len(traindata) # Number of loaded training samples
-    # testsize = len(testdata) # Number of loaded testing samples
-
-    trainsize = 1000 # Number of loaded training samples
-    testsize = 100 # Number of loaded testing samples
+    if whole_dataset:
+        trainsize = len(traindata) # Number of loaded training samples
+        testsize = len(testdata) # Number of loaded testing samples
+    else:
+        trainsize = 1000 # Number of loaded training samples
+        testsize = 100 # Number of loaded testing samples
 
 
     old_fs = 16000 # Sampling rate of the samples
@@ -43,26 +48,29 @@ def load_data():
     print("Num amplitudes per sample {}".format(sliceLength))
     print("Num non overlapping windows {}".format(int(totalSliceLength * new_fs / segmentLength)))
 
-    for i in tqdm(range(trainsize)): 
+    for i in tqdm(range(split*REF_NUMBER, min(trainsize, (split + 1)*REF_NUMBER))): 
         fs, train_sound_data = wavfile.read(DataSetPath+traindata[i]['audio_file_path']) # Read wavfile to extract amplitudes
 
-        x_train = train_sound_data.copy() # Get a mutable copy of the wavfile
+        if train_sound_data.shape[0] != 0: # Check for corrupted data
+            x_train = train_sound_data.copy() # Get a mutable copy of the wavfile
 
-        _x_train = resample_wav(old_fs, new_fs, x_train)
+            _x_train = resample_wav(old_fs, new_fs, x_train)
 
-        _x_train.resize(sliceLength, refcheck=False) # Zero stuff the single to a length of sliceLength
-        _x_train = _x_train.reshape(-1,int(segmentLength)) # Split slice into Segments with 0 overlap
-        x_train_list.append(_x_train.astype(np.float32)) # Add segmented slice to training sample list, cast to float so librosa doesn't complain
-        y_train_list.append(traindata[i]['is_hotword']) # Read label 
+            _x_train.resize(sliceLength, refcheck=False) # Zero stuff the single to a length of sliceLength
+            _x_train = _x_train.reshape(-1,int(segmentLength)) # Split slice into Segments with 0 overlap
+            x_train_list.append(_x_train.astype(np.float32)) # Add segmented slice to training sample list, cast to float so librosa doesn't complain
+            y_train_list.append(traindata[i]['is_hotword']) # Read label 
 
-    for i in tqdm(range(testsize)):
+    for i in tqdm(range(split*REF_NUMBER, min(testsize, (split + 1)*REF_NUMBER))):
         fs, test_sound_data = wavfile.read(DataSetPath+testdata[i]['audio_file_path'])
-        x_test = test_sound_data.copy()
-        _x_test = resample_wav(old_fs, new_fs, x_test)
-        _x_test.resize(sliceLength, refcheck=False)
-        _x_test = _x_test.reshape((-1,int(segmentLength)))
-        x_test_list.append(_x_test.astype(np.float32))
-        y_test_list.append(testdata[i]['is_hotword'])
+
+        if test_sound_data.shape[0] != 0:
+            x_test = test_sound_data.copy()
+            _x_test = resample_wav(old_fs, new_fs, x_test)
+            _x_test.resize(sliceLength, refcheck=False)
+            _x_test = _x_test.reshape((-1,int(segmentLength)))
+            x_test_list.append(_x_test.astype(np.float32))
+            y_test_list.append(testdata[i]['is_hotword'])
 
     x_train = tf.convert_to_tensor(np.asarray(x_train_list))
     y_train = tf.convert_to_tensor(np.asarray(y_train_list))
@@ -88,7 +96,7 @@ def compute_mfccs(tensor, sample_rate, lower_edge_hertz, upper_edge_hertz, num_m
 def construct_model():
   model = tf.keras.models.Sequential()
 
-  #model.add(layers.InputLayer(input_shape=(train_set.shape[1],train_set.shape[2],train_set.shape[3]), batch_size=(batchSize)))
+  #model.add(layers.InputLayer(input_shape=(train_set.shape[1],train_set.shape[2],train_set.shape[3]), batch_size=(BATCHSIZE)))
   model.add(layers.Conv2D(filters=3,kernel_size=(3,3),padding="same",input_shape=(train_set[0].shape)))
   model.add(layers.BatchNormalization())
   model.add(layers.Activation('relu'))
@@ -116,7 +124,7 @@ def construct_model():
   model.add(layers.Dense(8, kernel_regularizer=(regularizers.l1(0))))
   model.add(layers.Activation('relu'))
 
-  model.add(layers.Dense(2))
+  model.add(layers.Dense(3))
   model.add(layers.Activation('softmax'))
 
   return model
@@ -168,6 +176,12 @@ def print_input_output_details(input_details, output_details):
   print("type:", output_details[0]['dtype'])
 
 PICKLED_INPUT_OUTPUT = True
+INPUT_OUTPUT_DATAPATH = os.path.join("..", "Data", "enhanced_dataset.pkl")
+CHECKPOINT_FILEPATH = "."
+WHOLE_DATASET = True
+BATCHSIZE = 10
+EPOCHS = 10
+REPRESENTATIVE_DATASET = 2000
 
 SR = 9524.0
 LOWER_EDGE_HERTZ, UPPER_EDGE_HERTZ, NUM_MEL_BINS = 80.0, 4700.0, 64
@@ -183,38 +197,71 @@ if (not PICKLED_INPUT_OUTPUT):
   with open(DataSetPath+"test.json") as jsonfile:
       testdata = json.load(jsonfile)
 
-  x_train, y_train, x_test, y_test = load_data()
+  for split in range(29, 55):
+    x_train, y_train, x_test, y_test = load_data(split, WHOLE_DATASET)
 
-  # Task 2: Calculate MFCCs from each input sample 
-  x_train_mfcc = compute_mfccs(x_train, SR, LOWER_EDGE_HERTZ, UPPER_EDGE_HERTZ, NUM_MEL_BINS, FRAME_LENGTH, NUM_MFCC)
-  x_test_mfcc = compute_mfccs(x_test, SR, LOWER_EDGE_HERTZ, UPPER_EDGE_HERTZ, NUM_MEL_BINS, FRAME_LENGTH, NUM_MFCC)
+    # Task 2: Calculate MFCCs from each input sample 
+    # Task 3: Data Normalization & Training & Evaluation
+    train_set = tf.zeros(0)
+    train_labels = tf.zeros(0)
+    if not tf.equal(tf.size(x_train), 0):
+        x_train_mfcc = compute_mfccs(x_train, SR, LOWER_EDGE_HERTZ, UPPER_EDGE_HERTZ, NUM_MEL_BINS, FRAME_LENGTH, NUM_MFCC)
+        train_set = (x_train_mfcc/512 + 0.5)
+        train_labels = y_train
 
-  # Task 3: Data Normalization & Training & Evaluation
+    test_set = tf.zeros(0)
+    test_labels = tf.zeros(0)
+    if not tf.equal(tf.size(x_test), 0):
+        x_test_mfcc = compute_mfccs(x_test, SR, LOWER_EDGE_HERTZ, UPPER_EDGE_HERTZ, NUM_MEL_BINS, FRAME_LENGTH, NUM_MFCC)
+        test_set = (x_test_mfcc/512 + 0.5)
+        test_labels = y_test
 
-  train_set = (x_train_mfcc/512 + 0.5)
-  train_labels = y_train
-
-  test_set = (x_test_mfcc/512 + 0.5)
-  test_labels = y_test
-
-  # Pickle the correctly formatted input output
-  input_output = (train_set, train_labels, test_set, test_labels)
-  PATHTODUMP = os.path.join("..", "Data", "input_output.pkl")
-  with open(PATHTODUMP, 'wb') as f:
+    # Pickle the correctly formatted input output
+    input_output = (train_set, train_labels, test_set, test_labels)
+    PATHTODUMP = os.path.join("..", "Data", "input_output_{:02d}.pkl".format(split))
+    with open(PATHTODUMP, 'wb') as f:
       pickle.dump(input_output, f) 
 
 ###########################
 # Unpickle the correctly formatted input output
-pickle_off = open(os.path.join("..", "Data", "input_output.pkl"),"rb")
+pickle_off = open(INPUT_OUTPUT_DATAPATH,"rb")
 train_set, train_labels, test_set, test_labels = pickle.load(pickle_off)
-
-batchSize = 10
-epochs = 1
+#TODO: Use generators, I think it would make training quicker.
 
 model = construct_model()
 model.compile(loss='sparse_categorical_crossentropy', optimizer=tf.keras.optimizers.Adam(), metrics=['accuracy'])
-history = model.fit(train_set, train_labels, batchSize, epochs, validation_split=0.1, workers=3)
+model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
+    filepath=CHECKPOINT_FILEPATH,
+    save_weights_only=False,
+    monitor='val_accuracy',
+    mode='max',
+    save_best_only=True)
+history = model.fit(train_set, train_labels, BATCHSIZE, EPOCHS, callbacks=[model_checkpoint_callback], validation_split=0.1, workers=4)
 print(model.summary())
+score = model.evaluate(test_set, test_labels)
+print("Score: {}".format(score))
+
+# Task 3.5: Visualize the history to pick the model where the validation loss is lowest
+training_loss = history.history['loss']
+val_loss = history.history['val_loss']
+val_accuracy = history.history['val_accuracy']
+
+# Create count of the number of EPOCHS 
+epoch_count = range(1, len(training_loss) + 1)
+
+# Visualize loss history 
+plt.plot(epoch_count, training_loss, 'r--')
+plt.plot(epoch_count, val_loss, 'b-')
+plt.plot(epoch_count, val_accuracy, 'g')
+plt.legend(['Training Loss', 'Val Loss', 'Val Accuracy'])
+plt.xlabel('Epoch')
+plt.ylabel('Loss/Val Accuracy')
+plt.show()
+
+sys.exit()
+
+# # Load best model form data folder to quantize it
+model = models.load_model("../Data/test_model1")
 score = model.evaluate(test_set, test_labels)
 print("Score: {}".format(score))
 
@@ -237,19 +284,19 @@ MFCC_PARAMS ={
 "upper_edge_hertz" : UPPER_EDGE_HERTZ,
 "num_mel_bins" : NUM_MEL_BINS,
 "frame_length": FRAME_LENGTH,
-"num_mfcc": NUM_MFCC
+"num_mfcc": NUM_MFCC,
 }
 with open(os.path.join(next_model_folder_path, "MFCC{}_params.json".format(next_model_folder)), "w") as outfile:
   json.dump(MFCC_PARAMS, outfile)
 
 # Save .h5 model
-model.save(os.path.join(next_model_folder_path, "MFCCmodel{}.h5".format(next_model_folder)))
+model.save(os.path.join(next_model_folder_path, "MFCC{}model.h5".format(next_model_folder)))
 
 # Save .tflite + header
-train_set = train_set.numpy()
-test_set = test_set.numpy()
-train_labels = train_labels.numpy()
-test_labels = test_labels.numpy()
+# train_set = train_set.numpy()
+# test_set = test_set.numpy()
+# train_labels = train_labels.numpy()
+# test_labels = test_labels.numpy()
 tflite_model_name = 'MFCC{}'.format(next_model_folder)
 windows_per_sample = int(10 * 9524.0 / 1024)
 # Convert Keras model to a tflite model
@@ -258,7 +305,7 @@ converter = tf.lite.TFLiteConverter.from_keras_model(model)
 quantize = True
 if (quantize):
     def representative_dataset():
-        for i in range(500):
+        for i in range(2000):
             yield([train_set[i].reshape(1,windows_per_sample,13,1)])
     # Set the optimization flag.
     converter.optimizations = [tf.lite.Optimize.DEFAULT]
@@ -274,7 +321,7 @@ open(os.path.join(next_model_folder_path, tflite_model_name + '.tflite'), 'wb').
 
 c_model_name = 'MFCC'
 # Write TFLite model to a C source (or header) file
-with open(os.path.join(next_model_folder_path, c_model_name + '.h'), 'w') as file:
+with open(os.path.join(next_model_folder_path, c_model_name + '{}.h'.format(next_model_folder)), 'w') as file:
     file.write(hex_to_c_array(tflite_model, c_model_name))
 
 tflite_interpreter = tf.lite.Interpreter(model_path=os.path.join(next_model_folder_path, tflite_model_name + '.tflite'))
@@ -303,7 +350,23 @@ sum = 0
 for i in range(len(predictions)):
     if (predictions[i] == test_labels[i]):
         sum = sum + 1
-accuracy_score = sum / 100
+
+accuracy_score = sum / predictions.shape[0] 
 print("Accuracy of quantized to int8 model is {}%".format(accuracy_score*100))
 print("Compared to float32 accuracy of {}%".format(score[1]*100))
 print("We have a change of {}%".format((accuracy_score-score[1])*100))
+
+# Save model properties and training results
+MODEL_EVAL ={
+"representative_dataset": REPRESENTATIVE_DATASET,
+"test_acc_float_model": score[1],
+"test_loss_float_model": score[0],
+"test_acc_int8_model": accuracy_score,
+"whole_dataset": WHOLE_DATASET,
+"input_scale": input_scale,
+"input_zero_point": input_zero_point
+}
+with open(os.path.join(next_model_folder_path, "Model{}_eval.json".format(next_model_folder)), "w") as outfile:
+  json.dump(MODEL_EVAL, outfile)
+
+print("Done.")

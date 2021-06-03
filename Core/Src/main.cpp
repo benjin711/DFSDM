@@ -22,15 +22,23 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
+#include <string.h>
+
 #include <CycleCounter.h>
+#include <stdio.h>
 #include <arm_math.h>
-#include "MFCC01.h"
+#include "MFCC21.h"
 #include "linear_to_mel_weight_list.h"
 #include "ben_dct2_f32.h"
 #include "ring_buffer.h"
+
+#include "tensorflow/lite/micro/all_ops_resolver.h"
+#include "tensorflow/lite/micro/micro_error_reporter.h"
+#include "tensorflow/lite/micro/micro_interpreter.h"
+#include "tensorflow/lite/micro/kernels/micro_ops.h"
+#include "tensorflow/lite/schema/schema_generated.h"
+#include "tensorflow/lite/micro/micro_mutable_op_resolver.h"
+#include "tensorflow/lite/version.h"
 
 #define ARM_MATH_CM4
 #define ARM_MATH_DSP
@@ -43,6 +51,8 @@
 #define SYSCLK 80000000
 #define SAMPLINGRATE 9524
 #define N_MFCCS 13
+#define INPUT_SCALE 0.003135847859084606
+#define INPUT_ZERO_POINT -128
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -64,10 +74,16 @@
 DFSDM_Filter_HandleTypeDef hdfsdm1_filter0;
 DFSDM_Channel_HandleTypeDef hdfsdm1_channel2;
 DMA_HandleTypeDef hdma_dfsdm1_flt0;
-
 USART_HandleTypeDef husart1;
 
 /* USER CODE BEGIN PV */
+namespace {
+  tflite::ErrorReporter* error_reporter = nullptr;
+  const tflite::Model* model = nullptr;
+  tflite::MicroInterpreter* interpreter = nullptr;
+  TfLiteTensor* model_input = nullptr;
+  TfLiteTensor* model_output = nullptr;
+} // namespace
 
 /* USER CODE END PV */
 
@@ -139,6 +155,19 @@ void HAL_DFSDM_FilterRegConvHalfCpltCallback(DFSDM_Filter_HandleTypeDef *hdfsdm_
 	secondHalfFull = true;
 }
 
+/**
+  * @brief Convert the float mfccs into int8 after normalization
+  * @param mfccs_float, mfccs_int8
+  * @retval None
+  */
+void normalize_mfccs(float32_t* mfccs_float, int8_t* mfccs_int8){
+	for(int i = 0; i<N_MFCCS; i++){
+		mfccs_int8[i] = (int8_t)((mfccs_float[i] / 512 + 0.5) / INPUT_SCALE + INPUT_ZERO_POINT);
+	}
+}
+
+
+
 /* USER CODE END 0 */
 
 /**
@@ -148,6 +177,15 @@ void HAL_DFSDM_FilterRegConvHalfCpltCallback(DFSDM_Filter_HandleTypeDef *hdfsdm_
 int main(void)
 {
   /* USER CODE BEGIN 1 */
+	char buf[50];
+	int buf_len = 0;
+	TfLiteStatus tflite_status;
+	uint32_t num_elements;
+	uint32_t num_output_elements;
+	int8_t output[3];
+	const int kTensorArenaSize = 30 * 1024;
+	static uint8_t tensor_arena[kTensorArenaSize];
+	size_t counter = 0;
 
   /* USER CODE END 1 */
 
@@ -176,6 +214,94 @@ int main(void)
 	if(HAL_OK != HAL_DFSDM_FilterRegularStart_DMA(&hdfsdm1_filter0, RecBuff, QUEUELENGTH)){
     Error_Handler();
   }
+
+	static tflite::MicroErrorReporter micro_error_reporter;
+	error_reporter = &micro_error_reporter;
+	// Say something to test error reporter
+	buf_len = sprintf(buf, "START TEST\r\n");
+	HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
+	error_reporter->Report("STM32 TensorFlow Lite test");
+	// Map the model into a usable data structure
+	model = tflite::GetModel(MFCC);
+	if (model->version() != TFLITE_SCHEMA_VERSION)
+	{
+		error_reporter->Report("Model version does not match Schema");
+	while(1);
+	}
+
+//	tflite::AllOpsResolver micro_op_resolver;
+	tflite::MicroMutableOpResolver<7> micro_op_resolver;
+	tflite_status = micro_op_resolver.AddFullyConnected();
+	if (tflite_status != kTfLiteOk)
+	{
+		error_reporter->Report("Could not add FULLY CONNECTED op");
+		while(1);
+	}
+	tflite_status = micro_op_resolver.AddConv2D();
+	if (tflite_status != kTfLiteOk)
+	{
+		error_reporter->Report("Could not add CONV2D op");
+		while(1);
+	}
+	tflite_status = micro_op_resolver.AddMaxPool2D();
+	if (tflite_status != kTfLiteOk)
+	{
+		error_reporter->Report("Could not add AddMaxPool2D op");
+		while(1);
+	}
+	tflite_status = micro_op_resolver.AddMean();
+	if (tflite_status != kTfLiteOk)
+	{
+		error_reporter->Report("Could not add MEAN op");
+		while(1);
+	}
+	tflite_status =micro_op_resolver.AddReshape();
+	if (tflite_status != kTfLiteOk)
+	{
+		error_reporter->Report("Could not add RESHAPE op");
+		while(1);
+	}
+
+	tflite_status = micro_op_resolver.AddSoftmax();
+	if (tflite_status != kTfLiteOk)
+	{
+		error_reporter->Report("Could not add Softmax op");
+		while(1);
+	}
+	tflite_status = micro_op_resolver.AddRelu();
+	if (tflite_status != kTfLiteOk)
+	{
+		error_reporter->Report("Could not add Softmax op");
+		while(1);
+	}
+
+	static tflite::MicroInterpreter static_interpreter(
+		model, micro_op_resolver, tensor_arena, kTensorArenaSize, error_reporter);
+	interpreter = &static_interpreter;
+
+	tflite_status = interpreter->AllocateTensors();
+
+	if (tflite_status != kTfLiteOk)
+	{
+		buf_len = sprintf(buf, "Failed tensors\r\n");
+		HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
+		error_reporter->Report("AllocateTensors() failed");
+		while(1);
+	}
+
+	// Assign model input and output buffers (tensors) to pointers
+	model_input = interpreter->input(0);
+	model_output = interpreter->output(0);
+	float input_size = model_input->dims->size;
+	buf_len = sprintf(buf, "Model input size: %f\r\n", input_size);
+	HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
+	// Get number of elements in input tensor
+	num_elements = model_input->bytes;
+	buf_len = sprintf(buf, "Number of input elements: %lu\r\n", num_elements);
+	HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
+
+
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -193,7 +319,9 @@ int main(void)
 	float32_t buffer2[fl];
 	struct RingBuffer rb;
 	// Output
-	float32_t mfccs[N_MFCCS];
+	float32_t mfccs_float[N_MFCCS];
+	int8_t mfccs_int8[N_MFCCS];
+
 	// Other Objects
 	arm_rfft_fast_instance_f32 rfft_struct_v1;
 	arm_rfft_fast_instance_f32 rfft_struct_v2;
@@ -207,6 +335,7 @@ int main(void)
 
 	// Debug
 	bool flag = true;
+	bool print_output = true;
 
 
   while (1)
@@ -214,20 +343,19 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-
 		if(firstHalfFull && flag){
 			for(int i=0;i<QUEUELENGTH/2;i++){
 				buffer1[i] = (float32_t)(RecBuff[i]>>8);
-				//printf("%f\r\n", buffer1[i]);
+//		  	buf_len = sprintf(buf, "%f\r\n", buffer1[i]);
+//		  	HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
 			}
 
 			arm_rfft_fast_f32(&rfft_struct_v1, buffer1, buffer2, 0);
 			arm_cmplx_mag_f32(buffer2, buffer1, fl / 2);
 			calc_log_mel_spectrogram(buffer1, buffer2);
-			ben_dct2_f32(buffer2, buffer1,  mfccs, &rfft_struct_v2);
-			insert_data(&rb, mfccs);
-
-
+			ben_dct2_f32(buffer2, buffer1,  mfccs_float, &rfft_struct_v2);
+			normalize_mfccs(mfccs_float, mfccs_int8);
+			insert_data(&rb, mfccs_int8);
 
 			firstHalfFull = false;
 			//flag = false;
@@ -235,17 +363,54 @@ int main(void)
 		if(secondHalfFull){
 			for(int i=QUEUELENGTH/2;i<QUEUELENGTH;i++){
 				buffer1[i - QUEUELENGTH/2] = (float32_t)(RecBuff[i]>>8);
-				//printf("%f\r\n", buffer1[i - QUEUELENGTH/2]);
+//				buf_len = sprintf(buf, "%f\r\n", buffer1[i - QUEUELENGTH/2]);
+//				HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
 			}
-
 
 			arm_rfft_fast_f32(&rfft_struct_v1, buffer1, buffer2, 0);
 			arm_cmplx_mag_f32(buffer2, buffer1, fl / 2);
 			calc_log_mel_spectrogram(buffer1, buffer2);
-			ben_dct2_f32(buffer2, buffer1,  mfccs, &rfft_struct_v2);
-			insert_data(&rb, mfccs);
+			ben_dct2_f32(buffer2, buffer1,  mfccs_float, &rfft_struct_v2);
+			normalize_mfccs(mfccs_float, mfccs_int8);
+			insert_data(&rb, mfccs_int8);
 
 			secondHalfFull = false;
+		}
+
+		if(do_inference(&rb)){
+			copy_inference_batch(&rb, model_input->data.int8);
+			ResetTimer();
+			StartTimer();
+			tflite_status = interpreter->Invoke();
+			if(tflite_status != kTfLiteOk)
+			{
+				error_reporter->Report("Invoke failed");
+			}
+			StopTimer();
+			buf_len = sprintf(buf, "##### [%d]s\r\n", getCycles());
+			HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
+			output[0] = model_output->data.int8[0];
+			output[1] = model_output->data.int8[1];
+			output[2] = model_output->data.int8[2];
+			if(print_output){
+				buf_len = sprintf(buf, "Output %d: [%d, %d, %d]\r\n", counter, output[0], output[1], output[2]);
+				HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
+			}
+
+			if(output[1] > output[0] && output[1] > output[2]){
+				buf_len = sprintf(buf, "[%d] I am bit deaf, but did you say <<Hey Snips>>?!\r\n", counter);
+				HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
+				HAL_Delay(200);
+				set_triggered(&rb);
+			} else if(output[0] > output[1] && output[0] > output[2]){
+				buf_len = sprintf(buf, "[%d] Hearing noise I don't understand.\r\n", counter);
+				HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
+			} else if(output[2] > output[0] && output[2] > output[1]){
+				buf_len = sprintf(buf, "[%d] Hearing nothing.\r\n", counter);
+				HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
+			}
+
+			counter++;
 		}
 
 	}
