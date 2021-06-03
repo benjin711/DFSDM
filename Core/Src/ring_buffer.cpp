@@ -11,10 +11,15 @@
 
 extern USART_HandleTypeDef husart1;
 
+void set_triggered(struct RingBuffer* rb){
+	rb->triggered = true;
+}
+
 void init_ring_buffer(struct RingBuffer* rb){
 	rb->buffer_ptr = 0;
 	rb->last_inference_head = 0;
 	rb->filled = false;
+	rb->triggered = false;
 }
 
 void insert_data(struct RingBuffer* rb, int8_t* data){
@@ -66,6 +71,28 @@ void update_last_inference_head(struct RingBuffer* rb){
 	}
 }
 
+int distance_buffer_ptr_last_inference_head(struct RingBuffer* rb){
+	if(rb->buffer_ptr >= rb->last_inference_head){
+		return rb->buffer_ptr - rb->last_inference_head;
+	} else if(rb->buffer_ptr < rb->last_inference_head){
+		return (BUFFERSIZE - rb->last_inference_head) + rb->buffer_ptr;
+	} else {
+		while(1){
+			// while loop of shame
+		}
+	}
+	return -1;
+}
+
 bool do_inference(struct RingBuffer* rb){
-	return !(rb->buffer_ptr == (rb->last_inference_head + 1) % BUFFERSIZE) && rb->filled;
+	int dist = distance_buffer_ptr_last_inference_head(rb);
+	bool cond1 = rb->filled;
+	bool cond2 = distance_buffer_ptr_last_inference_head(rb) > 1;
+	bool cond3 = !rb->triggered || dist > MIN_DIST;
+
+	if(rb->triggered && dist > MIN_DIST){
+		rb->triggered = false;
+	}
+
+	return cond1 && cond2 && cond3;
 }

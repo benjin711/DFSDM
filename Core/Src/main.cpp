@@ -400,7 +400,8 @@ int main(void)
 			if(output[1] > output[0] && output[1] > output[2]){
 				buf_len = sprintf(buf, "[%d] I am bit deaf, but did you say <<Hey Snips>>?!\r\n", counter);
 				HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
-				HAL_Delay(2000);
+				HAL_Delay(200);
+				set_triggered(&rb);
 			} else if(output[0] > output[1] && output[0] > output[2]){
 				buf_len = sprintf(buf, "[%d] Hearing noise I don't understand.\r\n", counter);
 				HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
