@@ -92,7 +92,7 @@ mfccs = mfccs/512 + 0.5
 
 
 # Pickle the correctly formatted input output (only quantization normalization missing)
-silence_data = (mfccs, 2*np.ones(NUM_SAMPLES))
+silence_data = (mfccs, tf.cast(tf.convert_to_tensor(2*np.ones(NUM_SAMPLES)), tf.int64))
 PATHTODUMP = os.path.join("..", "Data", "silence.pkl")
 with open(PATHTODUMP, 'wb') as f:
   pickle.dump(silence_data, f)
