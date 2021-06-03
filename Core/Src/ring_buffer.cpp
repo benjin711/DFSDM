@@ -6,10 +6,15 @@
  */
 
 #include "ring_buffer.h"
+#include <stdio.h>
+#include "stm32l4xx_hal.h"
+
+extern USART_HandleTypeDef husart1;
 
 void init_ring_buffer(struct RingBuffer* rb){
 	rb->buffer_ptr = 0;
 	rb->last_inference_head = 0;
+	rb->filled = false;
 }
 
 void insert_data(struct RingBuffer* rb, int8_t* data){
@@ -24,6 +29,13 @@ void increment_buffer_ptr(struct RingBuffer* rb){
 		(rb->buffer_ptr)++;
 	} else if(rb->buffer_ptr == BUFFERSIZE - 1){
 		rb->buffer_ptr = 0;
+		if(!rb->filled){
+			rb->filled = true;
+			int buf_len = 0;
+			char buf[50];
+			buf_len = sprintf(buf, "Ring Buffer initialized!");
+			HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
+		}
 	} else {
 		while(1){
 			// buffer ptr out of range
@@ -52,4 +64,8 @@ void update_last_inference_head(struct RingBuffer* rb){
 			// while loop of shame
 		}
 	}
+}
+
+bool do_inference(struct RingBuffer* rb){
+	return !(rb->buffer_ptr == (rb->last_inference_head + 1) % BUFFERSIZE) && rb->filled;
 }

@@ -17,6 +17,7 @@ struct RingBuffer {
 	int8_t data[BUFFERSIZE][N_MFCC];
 	uint16_t last_inference_head;
 	uint16_t buffer_ptr;
+	bool filled;
 };
 
 void init_ring_buffer(struct RingBuffer* rb);
@@ -28,6 +29,8 @@ void increment_buffer_ptr(struct RingBuffer* rb);
 void copy_inference_batch(struct RingBuffer* rb, int8_t* batch);
 
 void update_last_inference_head(struct RingBuffer* rb);
+
+bool do_inference(struct RingBuffer* rb);
 
 
 #endif /* INC_RING_BUFFER_H_ */
