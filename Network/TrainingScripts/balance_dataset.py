@@ -52,10 +52,10 @@ np.random.shuffle(idx)
 temp_set = temp_set[idx]
 temp_labels = temp_labels[idx]
 # Split
-test_set = temp_set[:int(train_set.shape[0]/5)]
-train_set = temp_set[int(train_set.shape[0]/5):]
-test_labels = temp_labels[:int(train_set.shape[0]/5)]
-train_labels = temp_labels[int(train_set.shape[0]/5):]
+test_set = temp_set[:int(temp_set.shape[0]/5)]
+train_set = temp_set[int(temp_set.shape[0]/5):]
+test_labels = temp_labels[:int(temp_set.shape[0]/5)]
+train_labels = temp_labels[int(temp_set.shape[0]/5):]
 # Pickle
 
 enhanced_dataset = (train_set, train_labels, test_set, test_labels)

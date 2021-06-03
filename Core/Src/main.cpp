@@ -27,7 +27,7 @@
 #include <CycleCounter.h>
 #include <stdio.h>
 #include <arm_math.h>
-#include "MFCC17.h"
+#include "MFCC21.h"
 #include "linear_to_mel_weight_list.h"
 #include "ben_dct2_f32.h"
 #include "ring_buffer.h"
@@ -182,7 +182,7 @@ int main(void)
 	TfLiteStatus tflite_status;
 	uint32_t num_elements;
 	uint32_t num_output_elements;
-	int8_t output[2];
+	int8_t output[3];
 	const int kTensorArenaSize = 30 * 1024;
 	static uint8_t tensor_arena[kTensorArenaSize];
 	size_t counter = 0;
@@ -335,7 +335,7 @@ int main(void)
 
 	// Debug
 	bool flag = true;
-	bool print_output = false;
+	bool print_output = true;
 
 
   while (1)
@@ -391,16 +391,21 @@ int main(void)
 			HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
 			output[0] = model_output->data.int8[0];
 			output[1] = model_output->data.int8[1];
+			output[2] = model_output->data.int8[2];
 			if(print_output){
-				buf_len = sprintf(buf, "Output %d: [%d, %d]\r\n", counter, output[0], output[1]);
+				buf_len = sprintf(buf, "Output %d: [%d, %d, %d]\r\n", counter, output[0], output[1], output[2]);
 				HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
 			}
-			if(output[1] > output[0]){
-				buf_len = sprintf(buf, "[%d] Hey back!\r\n", counter);
+
+			if(output[1] > output[0] && output[1] > output[2]){
+				buf_len = sprintf(buf, "[%d] I am bit deaf, but did you say <<Hey Snips>>?!\r\n", counter);
 				HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
 				HAL_Delay(2000);
-			} else {
-				buf_len = sprintf(buf, "[%d] Hearing nothing..\r\n", counter);
+			} else if(output[0] > output[1] && output[0] > output[2]){
+				buf_len = sprintf(buf, "[%d] Hearing noise I don't understand.\r\n", counter);
+				HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
+			} else if(output[2] > output[0] && output[2] > output[1]){
+				buf_len = sprintf(buf, "[%d] Hearing nothing.\r\n", counter);
 				HAL_USART_Transmit(&husart1, (uint8_t *)buf, buf_len, 100);
 			}
 

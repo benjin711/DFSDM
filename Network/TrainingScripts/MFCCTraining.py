@@ -13,6 +13,7 @@ from tqdm import tqdm
 import os
 import pickle
 from matplotlib import pyplot as plt
+import sys
 
 def resample_wav(old_fs, new_fs, data):
     number_new_samples = int(data.shape[0] * float(new_fs)/float(old_fs))
@@ -123,7 +124,7 @@ def construct_model():
   model.add(layers.Dense(8, kernel_regularizer=(regularizers.l1(0))))
   model.add(layers.Activation('relu'))
 
-  model.add(layers.Dense(2))
+  model.add(layers.Dense(3))
   model.add(layers.Activation('softmax'))
 
   return model
@@ -175,11 +176,12 @@ def print_input_output_details(input_details, output_details):
   print("type:", output_details[0]['dtype'])
 
 PICKLED_INPUT_OUTPUT = True
-INPUT_OUTPUT_DATAPATH = os.path.join("..", "Data", "input_output_full.pkl")
+INPUT_OUTPUT_DATAPATH = os.path.join("..", "Data", "enhanced_dataset.pkl")
+CHECKPOINT_FILEPATH = "."
 WHOLE_DATASET = True
 BATCHSIZE = 10
 EPOCHS = 10
-RESPRESENTATIVE_DATASET = 2000
+REPRESENTATIVE_DATASET = 2000
 
 SR = 9524.0
 LOWER_EDGE_HERTZ, UPPER_EDGE_HERTZ, NUM_MEL_BINS = 80.0, 4700.0, 64
@@ -228,9 +230,8 @@ train_set, train_labels, test_set, test_labels = pickle.load(pickle_off)
 
 model = construct_model()
 model.compile(loss='sparse_categorical_crossentropy', optimizer=tf.keras.optimizers.Adam(), metrics=['accuracy'])
-checkpoint_filepath = '../Data'
 model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
-    filepath=checkpoint_filepath,
+    filepath=CHECKPOINT_FILEPATH,
     save_weights_only=False,
     monitor='val_accuracy',
     mode='max',
@@ -257,11 +258,12 @@ plt.xlabel('Epoch')
 plt.ylabel('Loss/Val Accuracy')
 plt.show()
 
+sys.exit()
 
 # # Load best model form data folder to quantize it
-# model = models.load_model("../Data")
-# score = model.evaluate(test_set, test_labels)
-# print("Score: {}".format(score))
+model = models.load_model("../Data/test_model1")
+score = model.evaluate(test_set, test_labels)
+print("Score: {}".format(score))
 
 # Task 4: Store model as keras model and tflite model
 MODELS_FOLDER = os.path.join("Network", "Models")
@@ -291,10 +293,10 @@ with open(os.path.join(next_model_folder_path, "MFCC{}_params.json".format(next_
 model.save(os.path.join(next_model_folder_path, "MFCC{}model.h5".format(next_model_folder)))
 
 # Save .tflite + header
-train_set = train_set.numpy()
-test_set = test_set.numpy()
-train_labels = train_labels.numpy()
-test_labels = test_labels.numpy()
+# train_set = train_set.numpy()
+# test_set = test_set.numpy()
+# train_labels = train_labels.numpy()
+# test_labels = test_labels.numpy()
 tflite_model_name = 'MFCC{}'.format(next_model_folder)
 windows_per_sample = int(10 * 9524.0 / 1024)
 # Convert Keras model to a tflite model
@@ -360,9 +362,11 @@ MODEL_EVAL ={
 "test_acc_float_model": score[1],
 "test_loss_float_model": score[0],
 "test_acc_int8_model": accuracy_score,
-"whole_dataset": WHOLE_DATASET
+"whole_dataset": WHOLE_DATASET,
+"input_scale": input_scale,
+"input_zero_point": input_zero_point
 }
-with open(os.path.join(next_model_folder_path, "MFCC{}_params.json".format(next_model_folder)), "w") as outfile:
-  json.dump(MFCC_PARAMS, outfile)
+with open(os.path.join(next_model_folder_path, "Model{}_eval.json".format(next_model_folder)), "w") as outfile:
+  json.dump(MODEL_EVAL, outfile)
 
 print("Done.")
