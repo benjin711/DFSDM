@@ -95,7 +95,7 @@ def compute_mfccs(tensor, sample_rate, lower_edge_hertz, upper_edge_hertz, num_m
 def construct_model():
   model = tf.keras.models.Sequential()
 
-  #model.add(layers.InputLayer(input_shape=(train_set.shape[1],train_set.shape[2],train_set.shape[3]), batch_size=(batchSize)))
+  #model.add(layers.InputLayer(input_shape=(train_set.shape[1],train_set.shape[2],train_set.shape[3]), batch_size=(BATCHSIZE)))
   model.add(layers.Conv2D(filters=3,kernel_size=(3,3),padding="same",input_shape=(train_set[0].shape)))
   model.add(layers.BatchNormalization())
   model.add(layers.Activation('relu'))
@@ -235,7 +235,7 @@ model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
     monitor='val_accuracy',
     mode='max',
     save_best_only=True)
-history = model.fit(train_set, train_labels, batchSize, epochs, callbacks=[model_checkpoint_callback], validation_split=0.1, workers=4)
+history = model.fit(train_set, train_labels, BATCHSIZE, EPOCHS, callbacks=[model_checkpoint_callback], validation_split=0.1, workers=4)
 print(model.summary())
 score = model.evaluate(test_set, test_labels)
 print("Score: {}".format(score))
@@ -245,7 +245,7 @@ training_loss = history.history['loss']
 val_loss = history.history['val_loss']
 val_accuracy = history.history['val_accuracy']
 
-# Create count of the number of epochs 
+# Create count of the number of EPOCHS 
 epoch_count = range(1, len(training_loss) + 1)
 
 # Visualize loss history 
