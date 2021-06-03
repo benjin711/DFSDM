@@ -14,7 +14,7 @@ def compute_mfccs(tensor, sample_rate, lower_edge_hertz, upper_edge_hertz, num_m
     linear_to_mel_weight_matrix = tf.signal.linear_to_mel_weight_matrix(
       num_mel_bins, num_spectrogram_bins, sample_rate, lower_edge_hertz,
       upper_edge_hertz)
-    mel_spectrograms = tf.tensordot(spectrograms, linear_to_mel_weight_matrix, 1)
+    mel_spectrograms = tf.tensordot(tf.cast(spectrograms, tf.float32), linear_to_mel_weight_matrix, 1)
     log_mel_spectrograms = tf.math.log(mel_spectrograms + 1e-6)
     mfccs = tf.signal.mfccs_from_log_mel_spectrograms(log_mel_spectrograms)[..., :num_mfcc]
     return tf.reshape(mfccs, (mfccs.shape[0],mfccs.shape[1],mfccs.shape[2],-1))
@@ -32,6 +32,11 @@ def kinda_random_walk(N):
 INPUT = "../LogData/Silence/silence01"
 OUTPUT = "../Data/silence.pkl"
 SAMPLERATE = 9524
+WAVFILESAMPLES = False
+LOWER_EDGE_HERTZ, UPPER_EDGE_HERTZ, NUM_MEL_BINS = 80.0, 4700.0, 64
+FRAME_LENGTH = 1024
+NUM_MFCC = 13
+NUM_SAMPLES = 500
 
 
 audio = pd.read_csv(INPUT + ".log", header=None, encoding='unicode_escape')
@@ -40,7 +45,7 @@ audio_fil = []
 noisy_items = 0
 for item in list(audio[0]):
     try:
-      if(np.float(item) < 500):
+      if(float(item) < 500):
         audio_fil.append(float(item))
     except ValueError:
       noisy_items += 1
@@ -55,22 +60,26 @@ audio_fil = audio_fil[0].reshape(-1, 93, 1024)
 
 wavfile.write("silence.wav", 9524, audio_fil.flatten())
 
-audio_fil = np.repeat(audio_fil, 1000, axis=0)
+audio_fil = np.repeat(audio_fil, NUM_SAMPLES, axis=0)
 
 # Shift each sample 
-mu = np.random.normal(0, 50, 1000)
+mu = np.random.normal(0, 50, NUM_SAMPLES)
 
-for i in range(1000):
+for i in range(NUM_SAMPLES):
   krw = kinda_random_walk(93*1024)
   krw = krw.reshape(93, 1024)
   audio_fil[i] = audio_fil[i] + mu[i]
   audio_fil[i] = audio_fil[i] + krw
-  if i < 10:
+  if i < 10 and WAVFILESAMPLES:
     wavfile.write("silence{}.wav".format(i), 9524, audio_fil[-1].flatten())
+
+# Calculate the MFCCs of the silence
+mfccs = compute_mfccs(tf.convert_to_tensor(audio_fil), SAMPLERATE, LOWER_EDGE_HERTZ, UPPER_EDGE_HERTZ, NUM_MEL_BINS, FRAME_LENGTH, NUM_MFCC)
+mfccs = mfccs/512 + 0.5
 
 
 # Sound signal
-count = range(1, 93*1024 + 1)
+# count = range(1, 93*1024 + 1)
 
 # Visualize 
 # plt.plot(count, audio_fil[-1].flatten(), 'r--')
@@ -83,7 +92,7 @@ count = range(1, 93*1024 + 1)
 
 
 # Pickle the correctly formatted input output (only quantization normalization missing)
-silence_data = (audio_fil, 2*np.ones(1000))
+silence_data = (mfccs, 2*np.ones(NUM_SAMPLES))
 PATHTODUMP = os.path.join("..", "Data", "silence.pkl")
 with open(PATHTODUMP, 'wb') as f:
   pickle.dump(silence_data, f)
